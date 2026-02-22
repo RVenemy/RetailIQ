@@ -22,6 +22,16 @@ separation and asynchronous task handling.
 
 ------------------------------------------------------------------------
 
+Run: docker compose up -d
+
+Example .env file:
+
+DATABASE_URL=postgresql://retailiq:retailiq@postgres:5432/retailiq
+REDIS_URL=redis://redis:6379/0
+CELERY_BROKER_URL=redis://redis:6379/1
+
+
+
 ## Architecture
 
 High-Level Flow:
