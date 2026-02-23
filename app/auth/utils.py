@@ -39,7 +39,7 @@ def generate_refresh_token(user_id):
     redis_client = get_redis_client()
     token = str(uuid.uuid4())
     # 30 days expiry
-    redis_client.setex(f"refresh:{user_id}", 30 * 24 * 3600, token)
+    redis_client.setex(f"refresh_token:{token}", 30 * 24 * 3600, user_id)
     return token
 
 def generate_otp(mobile_number):

@@ -21,17 +21,18 @@ cd RetailIQ
 
 ### Setup
 
-1. Copy `.env.example` to `.env` and fill in required environment variables (database URL, message broker URL, etc).
-2. Build and start services with Docker Compose:
+1. Build and start services with Docker Compose:
    ```bash
    docker-compose up --build
    ```
-   This will start the Flask API server, a message broker (e.g. Redis/RabbitMQ), and the database. Docker Compose centralizes the multi-container setup into a single YAML configuration【23†L157-L160】. On first run, the database container is initialized and Alembic runs any pending migrations automatically.
+   This will start the Flask API server, a message broker (e.g. Redis/RabbitMQ), and the database. Docker Compose centralizes the multi-container setup into a single YAML configuration【23†L157-L160】. The app container now waits for Postgres, auto-runs `alembic upgrade head`, and then starts Gunicorn.
+
+   If `.env` is missing, the startup script auto-creates it from `.env.example` so first-time local setup works out of the box.
 
 ### Configuration
 
 - API server listens on port **5000** by default. You can change ports or add services in `docker-compose.yml`.
-- Environment variables (in `.env`) include settings like `DATABASE_URL`, `CELERY_BROKER_URL`, etc.
+- Environment variables are loaded from `.env.example` by default in Docker Compose (and `.env` can still be used locally for overrides).
 - Sensitive data (secrets, API keys) should go into `.env` or Docker secrets, not checked into source.
 
 ## Usage

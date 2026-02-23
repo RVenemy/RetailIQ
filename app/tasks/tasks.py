@@ -315,6 +315,24 @@ def _get_top_skus(session, store_id: int) -> list[int]:
     return top[:MAX_SKUS_PER_STORE]
 
 
+
+
+def _coerce_to_date(value):
+    """Normalize DB date values across dialects (date/datetime/ISO string)."""
+    if value is None:
+        return None
+    if hasattr(value, 'date') and not isinstance(value, date_type):
+        # datetime -> date
+        try:
+            return value.date()
+        except Exception:
+            pass
+    if isinstance(value, date_type):
+        return value
+    if isinstance(value, str):
+        return date_type.fromisoformat(value[:10])
+    return value
+
 def _fetch_sku_history(session, store_id: int, product_id: int):
     """Return (dates, values) sorted ascending. Empty if no data."""
     rows = session.execute(text("""
@@ -329,9 +347,9 @@ def _fetch_sku_history(session, store_id: int, product_id: int):
         
     # Zero-fill missing dates for continuous time series
     from datetime import timedelta
-    date_dict = {r.date: float(r.units_sold or 0) for r in rows}
-    start_date = rows[0].date
-    end_date = rows[-1].date
+    date_dict = {_coerce_to_date(r.date): float(r.units_sold or 0) for r in rows}
+    start_date = _coerce_to_date(rows[0].date)
+    end_date = _coerce_to_date(rows[-1].date)
     
     filled_dates = []
     filled_values = []
@@ -358,9 +376,9 @@ def _fetch_store_history(session, store_id: int):
         
     # Zero-fill missing dates for continuous time series
     from datetime import timedelta
-    date_dict = {r.date: float(r.revenue or 0) for r in rows}
-    start_date = rows[0].date
-    end_date = rows[-1].date
+    date_dict = {_coerce_to_date(r.date): float(r.revenue or 0) for r in rows}
+    start_date = _coerce_to_date(rows[0].date)
+    end_date = _coerce_to_date(rows[-1].date)
     
     filled_dates = []
     filled_values = []

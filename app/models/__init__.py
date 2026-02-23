@@ -24,7 +24,10 @@ class User(Base):
     email: Mapped[Optional[str]] = mapped_column(String)
     password_hash: Mapped[Optional[str]] = mapped_column(String)
     role: Mapped[Optional[str]] = mapped_column(SQLEnum('owner', 'staff', name='user_role_enum'))
-    store_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('stores.store_id'))
+    store_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey('stores.store_id', use_alter=True, name='fk_users_store_id'),
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, default=lambda: datetime.now(timezone.utc))
 
