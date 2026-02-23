@@ -1,8 +1,21 @@
+import logging
 import uuid
 from datetime import datetime, timezone
 from .. import db
 from ..models import Transaction, TransactionItem, Product
 from .tasks import rebuild_daily_aggregates, evaluate_alerts
+
+
+logger = logging.getLogger(__name__)
+
+
+def _dispatch_async(task, *args):
+    """Queue background work without failing primary transaction flow."""
+    try:
+        task.delay(*args)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Background task dispatch failed for %s args=%s: %s", getattr(task, 'name', task), args, exc)
+
 
 def process_single_transaction(data, store_id, is_batch=False):
     # Check idempotency
@@ -57,8 +70,8 @@ def process_single_transaction(data, store_id, is_batch=False):
         db.session.add(txn_item)
 
     date_str = txn.created_at.strftime('%Y-%m-%d')
-    rebuild_daily_aggregates.delay(store_id, date_str)
-    evaluate_alerts.delay(store_id)
+    _dispatch_async(rebuild_daily_aggregates, store_id, date_str)
+    _dispatch_async(evaluate_alerts, store_id)
 
     return txn
 
@@ -146,6 +159,6 @@ def process_return_transaction(original_txn_id, return_data, store_id):
         db.session.add(ret_txn_item)
 
     date_str = ret_txn.created_at.strftime('%Y-%m-%d')
-    rebuild_daily_aggregates.delay(store_id, date_str)
+    _dispatch_async(rebuild_daily_aggregates, store_id, date_str)
 
     return ret_txn

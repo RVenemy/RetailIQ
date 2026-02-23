@@ -52,7 +52,14 @@ def create_app(config=None):
     db.init_app(app)
     limiter.init_app(app)
     
-    # Configure Celery
+    # Configure Celery (support both legacy upper-case and Celery native lower-case keys)
+    celery_conf = {
+        'broker_url': app.config.get('CELERY_BROKER_URL'),
+        'result_backend': app.config.get('CELERY_RESULT_BACKEND', app.config.get('CELERY_BROKER_URL')),
+        'task_always_eager': bool(app.config.get('task_always_eager', app.config.get('CELERY_ALWAYS_EAGER', False))),
+        'task_eager_propagates': bool(app.config.get('task_eager_propagates', app.config.get('CELERY_EAGER_PROPAGATES_EXCEPTIONS', True))),
+    }
+    celery_app.conf.update(celery_conf)
     celery_app.conf.update(app.config)
 
     # Register blueprints (stubs)

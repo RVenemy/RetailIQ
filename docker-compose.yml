@@ -6,14 +6,19 @@ services:
     volumes:
       - .:/app
     env_file:
-      - .env
+      - .env.example
     environment:
       - FLASK_APP=wsgi.py
       - FLASK_ENV=development
+      - DATABASE_URL=postgresql://retailiq:retailiq@postgres:5432/retailiq
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
-      - postgres
-      - redis
-    command: gunicorn --bind 0.0.0.0:5000 wsgi:app
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: ./scripts/start-app.sh
 
   postgres:
     image: postgres:15
@@ -25,6 +30,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U retailiq -d retailiq"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
 
   redis:
     image: redis:7
@@ -36,14 +46,16 @@ services:
     volumes:
       - .:/app
     env_file:
-      - .env
+      - .env.example
     environment:
       - DATABASE_URL=postgresql://retailiq:retailiq@postgres:5432/retailiq
       - CELERY_BROKER_URL=redis://redis:6379/1
       - REDIS_URL=redis://redis:6379/0
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     command: celery -A celery_worker.celery_app worker -l info
 
   beat:
@@ -51,14 +63,16 @@ services:
     volumes:
       - .:/app
     env_file:
-      - .env
+      - .env.example
     environment:
       - DATABASE_URL=postgresql://retailiq:retailiq@postgres:5432/retailiq
       - CELERY_BROKER_URL=redis://redis:6379/1
       - REDIS_URL=redis://redis:6379/0
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     command: celery -A celery_worker.celery_app beat -l info
 
 volumes:

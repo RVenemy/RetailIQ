@@ -1,11 +1,8 @@
-from .. import celery_app
+"""Compatibility task imports for transactions module.
 
-@celery_app.task
-def rebuild_daily_aggregates(store_id, date_str):
-    # Stub for daily aggregates
-    print(f"Rebuilding aggregates for store {store_id} on {date_str}")
+Use canonical task implementations from app.tasks.tasks so transaction flows,
+workers, and tests all share the same behavior.
+"""
+from app.tasks.tasks import rebuild_daily_aggregates, evaluate_alerts
 
-@celery_app.task
-def evaluate_alerts(store_id):
-    # Stub for evaluating alerts
-    print(f"Evaluating alerts for store {store_id}")
+__all__ = ["rebuild_daily_aggregates", "evaluate_alerts"]
