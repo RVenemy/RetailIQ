@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 from .. import db
 from ..models import Transaction, TransactionItem, Product
-from .tasks import rebuild_daily_aggregates, evaluate_alerts
+from app.tasks.tasks import rebuild_daily_aggregates, evaluate_alerts
 
 
 logger = logging.getLogger(__name__)

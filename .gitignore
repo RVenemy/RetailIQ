@@ -21,6 +21,18 @@ env/
 logs/
 debug.log
 error.log
+celerybeat-schedule
+
+# Local debug/test artifacts
+*_out.txt
+*_logs*.txt
+pytest_*.txt
+docker_*_out*.txt
+test_step*.txt
+test_results*.txt
+test_out*.txt
+psql*.txt
+prophet_test*.txt
 
 # OS
 .DS_Store
