@@ -129,7 +129,7 @@ def get_all_staff_performance():
     staff_members = db.session.query(User).filter(
         User.store_id == store_id,
         User.role == 'staff',
-        User.is_active is True
+        User.is_active == True
     ).all()
 
     # Get their sessions for today to link transactions
@@ -166,7 +166,7 @@ def get_all_staff_performance():
     ).filter(
         Transaction.store_id == store_id,
         func.date(Transaction.created_at) == today,
-        Transaction.is_return is False
+        Transaction.is_return == False
     ).group_by(StaffSession.user_id).all()
 
     agg_map = {row.user_id: row for row in txn_agg}
@@ -231,7 +231,7 @@ def get_staff_performance_detail(user_id):
         Transaction.store_id == store_id,
         StaffSession.user_id == user_id,
         func.date(Transaction.created_at) >= thirty_days_ago,
-        Transaction.is_return is False
+        Transaction.is_return == False
     ).group_by(func.date(Transaction.created_at)).order_by(func.date(Transaction.created_at).desc()).all()
 
     targets = db.session.query(StaffDailyTarget).filter(

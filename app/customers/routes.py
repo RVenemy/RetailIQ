@@ -56,7 +56,7 @@ def top_customers():
         db.session.query(Transaction.customer_id)
         .filter(
             Transaction.store_id == store_id,
-            Transaction.is_return is False,
+            Transaction.is_return == False,
             Transaction.customer_id.isnot(None),
         )
     )
@@ -84,7 +84,7 @@ def top_customers():
             .join(TransactionItem, Transaction.transaction_id == TransactionItem.transaction_id)
             .filter(
                 Transaction.store_id == store_id,
-                Transaction.is_return is False,
+                Transaction.is_return == False,
                 Transaction.customer_id.isnot(None),
             )
             .group_by(Transaction.customer_id)
@@ -139,7 +139,7 @@ def analytics():
         db.session.query(Transaction.customer_id)
         .filter(
             Transaction.store_id == store_id,
-            Transaction.is_return is False,
+            Transaction.is_return == False,
             Transaction.customer_id.isnot(None),
             Transaction.created_at >= month_start,
         )
@@ -159,7 +159,7 @@ def analytics():
         )
         .filter(
             Transaction.store_id == store_id,
-            Transaction.is_return is False,
+            Transaction.is_return == False,
             Transaction.customer_id.isnot(None),
         )
         .group_by(Transaction.customer_id)
@@ -182,7 +182,7 @@ def analytics():
             db.session.query(Transaction.customer_id)
             .filter(
                 Transaction.store_id == store_id,
-                Transaction.is_return is False,
+                Transaction.is_return == False,
                 Transaction.customer_id.isnot(None),
                 Transaction.created_at < month_start,
             )
@@ -214,7 +214,7 @@ def analytics():
             .join(Transaction, Transaction.transaction_id == TransactionItem.transaction_id)
             .filter(
                 Transaction.store_id == store_id,
-                Transaction.is_return is False,
+                Transaction.is_return == False,
                 Transaction.customer_id.isnot(None),
                 Transaction.created_at >= month_start,
             )
@@ -406,7 +406,7 @@ def customer_transactions(customer_id):
         .filter(
             Transaction.store_id == store_id,
             Transaction.customer_id == customer_id,
-            Transaction.is_return is False,
+            Transaction.is_return == False,
         )
     )
 
@@ -492,7 +492,7 @@ def customer_summary(customer_id):
         .filter(
             Transaction.store_id == store_id,
             Transaction.customer_id == customer_id,
-            Transaction.is_return is False,
+            Transaction.is_return == False,
         )
         .one()
     )
@@ -519,7 +519,7 @@ def customer_summary(customer_id):
         .filter(
             Transaction.store_id == store_id,
             Transaction.customer_id == customer_id,
-            Transaction.is_return is False,
+            Transaction.is_return == False,
         )
         .group_by(Product.category_id, Category.name)
         .order_by(func.sum(
@@ -543,7 +543,7 @@ def customer_summary(customer_id):
         .filter(
             Transaction.store_id == store_id,
             Transaction.customer_id == customer_id,
-            Transaction.is_return is False,
+            Transaction.is_return == False,
         )
         .order_by(Transaction.created_at)
         .all()

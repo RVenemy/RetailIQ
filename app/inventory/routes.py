@@ -89,7 +89,7 @@ def _slow_moving_product_ids(store_id):
 
     slow = db.session.query(Product.product_id).filter(
         Product.store_id == store_id,
-        Product.is_active is True,
+        Product.is_active == True,
         ~Product.product_id.in_(select(sold_ids.c.product_id)),
     ).all()
     return {row.product_id for row in slow}

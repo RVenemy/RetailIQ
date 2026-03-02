@@ -738,7 +738,7 @@ def build_all_analytics_snapshots():
     logger.info("Starting batch analytics snapshots generation")
     with task_session() as db:
         from app.models import Store
-        stores = db.session.query(Store).filter(Store.is_active is True).all()
+        stores = db.session.query(Store).filter(Store.is_active == True).all()
         for store in stores:
             build_analytics_snapshot.delay(store.store_id)
 
@@ -926,7 +926,7 @@ def update_gst_transactions_task(self):
             txns = session.query(Transaction).filter(
                 Transaction.store_id == store_id,
                 Transaction.created_at >= datetime.strptime(current_period + '-01', '%Y-%m-%d'),
-                Transaction.is_return is False,
+                Transaction.is_return == False,
                 ~Transaction.transaction_id.in_(existing_gst_txn_ids)
             ).all()
 
