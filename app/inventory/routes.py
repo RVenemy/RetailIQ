@@ -278,6 +278,7 @@ def delete_product(product_id):
 # ──────────────────────────────────────────────────────────────
 
 @inventory_bp.route('/products/<int:product_id>/stock-update', methods=['POST'])
+@inventory_bp.route('/products/<int:product_id>/stock', methods=['POST'])
 @require_auth
 def stock_update(product_id):
     store_id = g.current_user['store_id']
@@ -348,6 +349,7 @@ def stock_update(product_id):
 # ──────────────────────────────────────────────────────────────
 
 @inventory_bp.route('/products/stock-audit', methods=['POST'])
+@inventory_bp.route('/audit', methods=['POST'])
 @require_auth
 @require_role('owner')
 def stock_audit():

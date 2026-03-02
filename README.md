@@ -62,8 +62,8 @@ RetailIQ is built as a Flask app using SQLAlchemy models and blueprint modules. 
 - **Forecasting**: forecast cache for store-level and SKU-level projections.
 - **Decision engine**: deterministic recommendations using rules over computed context.
 - **NLP endpoint**: deterministic intent routing + template-based responses (not generative).
-- **Staff Performance**: Session management, daily target setting, and automated role-based metric aggregations.
-- **Loyalty & Credit**: Points-based loyalty programs, credit ledger, atomic loyalty accrual at transaction time, point redemption, credit sale enforcement, and automated point expiry.
+- **Staff Performance**: Session management, daily target setting, and automated role-based metric aggregations. Exposed via unified POST/PUT `/targets` mapping.
+- **Loyalty & Credit**: Points-based loyalty programs, credit ledger, atomic loyalty accrual at transaction time, point redemption, credit sale enforcement, automated point expiry. Exposed via native endpoint aliases mapped perfectly for DataSage.
 - **GST Compliance**: HSN code management, GSTIN validation (modulo-36 checksum), per-transaction CGST/SGST recording, GSTR-1 JSON generation, and liability slab analytics.
 - **WhatsApp Integration**: Outbound messaging (Alerts & Purchase Orders) via Meta Cloud API, secure Fernet token encryption at rest, and Meta webhook verification/handling.
 - **Chain Ownership**: Multi-store grouping, chain-wide KPI dashboards, store comparison matrix with relative coding, and automated inter-store transfer suggestions.
@@ -185,7 +185,7 @@ tests/
 ### Supplier Management entities
 - `suppliers`: registry of external vendors.
 - `supplier_products`: many-to-many link resolving quoted price and lead time.
-- `purchase_orders` & `purchase_order_items`: PO tracking structure.
+- `purchase_orders` & `purchase_order_items`: PO tracking structure, exposed via expanded `PUT/POST /send` and explicit `GET /{id}` query structures.
 - `goods_receipt_notes`: atomic ingestion of received products to store stock.
 
 ### Barcode & Receipt entities (migration `a3f91d2c5b88`)

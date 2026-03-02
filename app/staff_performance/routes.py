@@ -265,7 +265,7 @@ def get_staff_performance_detail(user_id):
         "history": history
     }), 200
 
-@staff_performance_bp.route('/targets', methods=['PUT'])
+@staff_performance_bp.route('/targets', methods=['PUT', 'POST'])
 @require_auth
 @require_role('owner')
 def upsert_staff_target():

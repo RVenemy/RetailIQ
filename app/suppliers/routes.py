@@ -280,7 +280,7 @@ def create_purchase_order():
     return jsonify(format_response(data={'id': str(po.id)})), 201
 
 
-@suppliers_bp.route('/purchase-orders/<uuid:po_id>/send', methods=['PUT'])
+@suppliers_bp.route('/purchase-orders/<uuid:po_id>/send', methods=['PUT', 'POST'])
 @require_auth
 def send_purchase_order(po_id):
     sid = _store_id()
@@ -299,6 +299,32 @@ def send_purchase_order(po_id):
     db.session.commit()
     return jsonify(format_response(data={'id': str(po.id)})), 200
 
+@suppliers_bp.route('/purchase-orders/<uuid:po_id>', methods=['GET'])
+@require_auth
+def get_purchase_order(po_id):
+    sid = _store_id()
+    po = db.session.query(PurchaseOrder).filter_by(id=po_id, store_id=sid).first()
+    if not po:
+        return jsonify(format_response(error='PO not found')), 404
+        
+    items = db.session.query(PurchaseOrderItem).filter_by(po_id=po.id).all()
+    
+    data = {
+        'id': str(po.id),
+        'supplier_id': str(po.supplier_id),
+        'status': po.status,
+        'expected_delivery_date': str(po.expected_delivery_date) if po.expected_delivery_date else None,
+        'notes': po.notes,
+        'created_at': str(po.created_at),
+        'items': [{
+            'product_id': i.product_id,
+            'ordered_qty': float(i.ordered_qty),
+            'received_qty': float(i.received_qty) if i.received_qty is not None else 0.0,
+            'unit_price': float(i.unit_price) if i.unit_price is not None else 0.0
+        } for i in items]
+    }
+    
+    return jsonify(format_response(data=data)), 200
 
 @suppliers_bp.route('/purchase-orders/<uuid:po_id>/receive', methods=['POST'])
 @require_auth

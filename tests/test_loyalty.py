@@ -204,3 +204,49 @@ def test_points_expiry_task(app, test_store, loyalty_customer_id, loyalty_progra
     ltx = db.session.query(LoyaltyTransaction).filter_by(account_id=acc.id, type='EXPIRE').first()
     assert ltx is not None
     assert float(ltx.points) == -500.0
+
+
+# New Aliased / Native Route endpoints test coverage
+def test_loyalty_account_alias(client, owner_headers, test_store, loyalty_customer_id, loyalty_program_id):
+    acc = CustomerLoyaltyAccount(customer_id=loyalty_customer_id, store_id=test_store.store_id, total_points=500, redeemable_points=500, lifetime_earned=500)
+    db.session.add(acc)
+    db.session.commit()
+        
+    resp = client.get(f"/api/v1/loyalty/customers/{loyalty_customer_id}/account", headers=owner_headers)
+    assert resp.status_code == 200
+    assert resp.json["data"]["total_points"] == 500.0
+
+def test_loyalty_transactions_fetch(client, owner_headers, test_store, loyalty_customer_id, loyalty_program_id):
+    acc = CustomerLoyaltyAccount(customer_id=loyalty_customer_id, store_id=test_store.store_id, total_points=500, redeemable_points=500, lifetime_earned=500)
+    db.session.add(acc)
+    db.session.flush()
+    tx = LoyaltyTransaction(account_id=acc.id, type='EARN', points=500, balance_after=500, notes="Bonus")
+    db.session.add(tx)
+    db.session.commit()
+    
+    resp = client.get(f"/api/v1/loyalty/customers/{loyalty_customer_id}/transactions", headers=owner_headers)
+    assert resp.status_code == 200
+    assert len(resp.json["data"]) == 1
+    assert resp.json["data"][0]["type"] == 'EARN'
+
+def test_credit_account_alias(client, owner_headers, test_store, loyalty_customer_id):
+    ledger = CreditLedger(customer_id=loyalty_customer_id, store_id=test_store.store_id, credit_limit=1000, balance=500)
+    db.session.add(ledger)
+    db.session.commit()
+        
+    resp = client.get(f"/api/v1/credit/customers/{loyalty_customer_id}/account", headers=owner_headers)
+    assert resp.status_code == 200
+    assert resp.json["data"]["balance"] == 500.0
+
+def test_credit_transactions_fetch(client, owner_headers, test_store, loyalty_customer_id):
+    ledger = CreditLedger(customer_id=loyalty_customer_id, store_id=test_store.store_id, credit_limit=1000, balance=500)
+    db.session.add(ledger)
+    db.session.flush()
+    tx = CreditTransaction(ledger_id=ledger.id, type='CREDIT_SALE', amount=250, balance_after=250, notes="Purchase")
+    db.session.add(tx)
+    db.session.commit()
+    
+    resp = client.get(f"/api/v1/credit/customers/{loyalty_customer_id}/transactions", headers=owner_headers)
+    assert resp.status_code == 200
+    assert len(resp.json["data"]) == 1
+    assert resp.json["data"][0]["type"] == 'CREDIT_SALE'

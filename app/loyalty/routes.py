@@ -54,6 +54,7 @@ def upsert_loyalty_program():
     return format_response(True, data={"message": "Loyalty program updated"}), 200
 
 @loyalty_bp.route('/loyalty/customers/<int:customer_id>', methods=['GET'])
+@loyalty_bp.route('/loyalty/customers/<int:customer_id>/account', methods=['GET'])
 @require_auth
 def get_customer_loyalty(customer_id):
     store_id = g.current_user['store_id']
@@ -80,6 +81,34 @@ def get_customer_loyalty(customer_id):
         "last_activity_at": account.last_activity_at.isoformat() if account.last_activity_at else None,
         "recent_transactions": recent_transactions
     }
+    return format_response(True, data=data), 200
+
+@loyalty_bp.route('/loyalty/customers/<int:customer_id>/transactions', methods=['GET'])
+@require_auth
+def get_loyalty_transactions(customer_id):
+    store_id = g.current_user['store_id']
+    account = db.session.query(CustomerLoyaltyAccount).filter_by(customer_id=customer_id, store_id=store_id).first()
+    
+    if not account:
+        return format_response(False, error={"code": "NOT_FOUND", "message": "Loyalty account not found"}), 404
+        
+    page = request.args.get('page', 1, type=int)
+    limit = min(request.args.get('limit', 20, type=int), 100)
+    offset = (page - 1) * limit
+    
+    txns = db.session.query(LoyaltyTransaction).filter_by(account_id=account.id).order_by(LoyaltyTransaction.created_at.desc()).offset(offset).limit(limit).all()
+    
+    data = []
+    for t in txns:
+        data.append({
+            "id": str(t.id),
+            "type": t.type,
+            "points": float(t.points) if t.points else 0,
+            "balance_after": float(t.balance_after) if t.balance_after else 0,
+            "created_at": t.created_at.isoformat(),
+            "notes": t.notes
+        })
+        
     return format_response(True, data=data), 200
 
 @loyalty_bp.route('/loyalty/customers/<int:customer_id>/redeem', methods=['POST'])
@@ -130,6 +159,7 @@ def redeem_loyalty_points(customer_id):
         return format_response(False, error={"code": "SERVER_ERROR", "message": str(e)}), 500
 
 @loyalty_bp.route('/credit/customers/<int:customer_id>', methods=['GET'])
+@loyalty_bp.route('/credit/customers/<int:customer_id>/account', methods=['GET'])
 @require_auth
 def get_customer_credit(customer_id):
     store_id = g.current_user['store_id']
@@ -155,6 +185,34 @@ def get_customer_credit(customer_id):
         "updated_at": ledger.updated_at.isoformat() if ledger.updated_at else None,
         "recent_transactions": recent_transactions
     }
+    return format_response(True, data=data), 200
+
+@loyalty_bp.route('/credit/customers/<int:customer_id>/transactions', methods=['GET'])
+@require_auth
+def get_credit_transactions(customer_id):
+    store_id = g.current_user['store_id']
+    ledger = db.session.query(CreditLedger).filter_by(customer_id=customer_id, store_id=store_id).first()
+    
+    if not ledger:
+        return format_response(False, error={"code": "NOT_FOUND", "message": "Credit ledger not found"}), 404
+        
+    page = request.args.get('page', 1, type=int)
+    limit = min(request.args.get('limit', 20, type=int), 100)
+    offset = (page - 1) * limit
+    
+    txns = db.session.query(CreditTransaction).filter_by(ledger_id=ledger.id).order_by(CreditTransaction.created_at.desc()).offset(offset).limit(limit).all()
+    
+    data = []
+    for t in txns:
+        data.append({
+            "id": str(t.id),
+            "type": t.type,
+            "amount": float(t.amount) if t.amount else 0,
+            "balance_after": float(t.balance_after) if t.balance_after else 0,
+            "created_at": t.created_at.isoformat(),
+            "notes": t.notes
+        })
+        
     return format_response(True, data=data), 200
 
 @loyalty_bp.route('/credit/customers/<int:customer_id>/repay', methods=['POST'])

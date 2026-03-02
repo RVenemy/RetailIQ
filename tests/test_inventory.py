@@ -348,3 +348,39 @@ def test_get_alerts(client, owner_headers, test_store, test_product):
 def test_unauthenticated_returns_401(client):
     resp = client.get('/api/v1/inventory/products')
     assert resp.status_code == 401
+
+# ─────────────────────────────────────────────────────────────
+# 10. Route Aliases
+# ─────────────────────────────────────────────────────────────
+
+def test_stock_update_alias_increments_stock(client, owner_headers, test_product):
+    original_stock = float(test_product.current_stock)
+    payload = {
+        "quantity_added": 25.0,
+        "purchase_price": 55.0,
+        "supplier_name": "Supplier Co",
+    }
+    resp = client.post(
+        f'/api/v1/inventory/products/{test_product.product_id}/stock',
+        json=payload,
+        headers=owner_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json['data']['current_stock'] == original_stock + 25.0
+
+def test_stock_audit_alias_creates_records(client, owner_headers, test_product):
+    expected_stock = float(test_product.current_stock)
+    actual_qty = expected_stock - 5.0
+    payload = {
+        "items": [
+            {"product_id": test_product.product_id, "actual_qty": actual_qty}
+        ],
+        "notes": "Monthly audit via alias",
+    }
+    resp = client.post(
+        '/api/v1/inventory/audit',
+        json=payload,
+        headers=owner_headers,
+    )
+    assert resp.status_code == 201
+    assert 'audit_id' in resp.json['data']
