@@ -728,8 +728,16 @@ docker-compose logs -f beat
 - Add lifecycle tests (rotation/replay/revocation).
 
 ## 5) Managing Docker Healthchecks
-- If you define a new container `SERVICE_ROLE`, be sure to account for it in the `Dockerfile.prod` `HEALTHCHECK` directive.
-- API relies on a cURL ping to port 5000. Workers and Beat containers gracefully bypass web server checks to prevent ECS deployment timeouts.
+
+RetailIQ uses a **two-layer healthcheck strategy** to prevent ECS deployment timeouts:
+
+1. **Dockerfile-level** (`Dockerfile.prod`): The `HEALTHCHECK` directive is conditional on `SERVICE_ROLE`. API containers cURL port 5000; workers and beat bypass with `exit 0`.
+2. **ECS task-definition-level** (`aws/task-definitions/*.json`): The `worker.json` and `beat.json` task definitions include an explicit `healthCheck` block (`echo healthy`) that **overrides** the Dockerfile HEALTHCHECK entirely. This guarantees ECS marks the container as healthy immediately, avoiding deployment timeout race conditions between `wait_for_db`, the container startup period, and ECS stability checks.
+
+**If you add a new service role:**
+- Add a case in `scripts/entrypoint.sh` for the new role.
+- Account for it in the `Dockerfile.prod` HEALTHCHECK conditional.
+- Create a new `aws/task-definitions/<role>.json` with an explicit `healthCheck` block (use `echo healthy` for non-HTTP services).
 
 
 ---
