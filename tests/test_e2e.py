@@ -193,7 +193,7 @@ def test_full_retail_day(client, app, test_store, test_owner, owner_headers, tes
     with app.app_context():
         headers = owner_headers
         sid = test_store.store_id
-        today = date.today()
+        today = datetime.now(timezone.utc).date()
 
         # ── b. Create 3 products ────────────────────────────────────────
         products = []
@@ -411,7 +411,7 @@ def test_gst_month_compilation(client, app, test_store, test_owner, owner_header
     with app.app_context():
         headers = owner_headers
         sid = test_store.store_id
-        period = date.today().strftime("%Y-%m")
+        period = datetime.now(timezone.utc).strftime("%Y-%m")
 
         # Enable GST via direct ORM (avoids GSTIN checksum complexity)
         config = StoreGSTConfig(
@@ -525,7 +525,7 @@ def test_offline_snapshot_freshness(client, app, test_store, test_owner, owner_h
     with app.app_context():
         headers = owner_headers
         sid = test_store.store_id
-        today = date.today()
+        today = datetime.now(timezone.utc).date()
 
         # Seed 30 days of DailyStoreSummary
         for i in range(30):

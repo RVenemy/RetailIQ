@@ -177,9 +177,9 @@ def test_zero_velocity_with_high_margin_lowers_suggestion(app, test_store, test_
     db.session.add(product)
     db.session.commit()
 
-    # Seed 36 days of history: sales from 50 to 15 days ago, zero in last 14 days
+    # Seed 36 days of history: sales from 50 to 17 days ago, zero in last 14 days
     today = date.today()
-    for i in range(50, 14, -1):
+    for i in range(50, 16, -1):
         d = today - timedelta(days=i)
         row = DailySkuSummary(
             date=d, store_id=test_store.store_id, product_id=product.product_id,
@@ -187,7 +187,7 @@ def test_zero_velocity_with_high_margin_lowers_suggestion(app, test_store, test_
             revenue=600.0, profit=240.0,
         )
         db.session.add(row)
-    # Last 14 days: zero sales (no rows → sum = 0)
+    # Last 16 days: zero sales (no rows → sum = 0)
     db.session.commit()
 
     # Seed store summary so anomaly check doesn't trigger

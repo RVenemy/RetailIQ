@@ -155,7 +155,7 @@ def test_po_receive_is_atomic(app, client, owner_headers, test_store, test_produ
 def test_overdue_po_task_creates_alert(app, test_store):
     with app.app_context():
         sid = _create_supplier(_db.session, test_store.store_id)
-        today = date.today()
+        today = datetime.now(timezone.utc).date()
         po = PurchaseOrder(store_id=test_store.store_id, supplier_id=sid, status='SENT', expected_delivery_date=today - timedelta(days=2))
         _db.session.add(po)
         _db.session.commit()

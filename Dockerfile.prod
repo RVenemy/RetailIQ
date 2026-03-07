@@ -78,6 +78,6 @@ CMD ["scripts/entrypoint.sh"]
 
 # Health check for container orchestrators
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:5000/health || exit 1
+    CMD if [ "$SERVICE_ROLE" = "api" ] || [ -z "$SERVICE_ROLE" ]; then curl -f http://localhost:5000/health || exit 1; else exit 0; fi
 
 USER appuser

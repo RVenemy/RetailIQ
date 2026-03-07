@@ -100,11 +100,11 @@ RetailIQ is built as a Flask app using SQLAlchemy models and blueprint modules. 
 - **Celery Beat**: schedules periodic jobs.
 
 ### Runtime Topology (`docker-compose.yml`)
-- `app`: API server container.
+- `app`: API server container (exposes healthcheck on port 5000).
 - `postgres`: database.
 - `redis`: cache/broker.
-- `worker`: Celery worker process.
-- `beat`: Celery scheduler.
+- `worker`: Celery worker process (standalone component, exits 0 for container healthchecks).
+- `beat`: Celery scheduler (singleton process, exits 0 for container healthchecks).
 
 Startup behavior:
 1. `app` runs `scripts/start-app.sh`.
@@ -726,6 +726,11 @@ docker-compose logs -f beat
 - The `verify-otp` endpoint returns the same `AuthTokens` shape as `login` — any changes to the login response must be mirrored.
 - Refresh token rotation happens on every `/auth/refresh` call (old token is deleted from Redis, new one is issued).
 - Add lifecycle tests (rotation/replay/revocation).
+
+## 5) Managing Docker Healthchecks
+- If you define a new container `SERVICE_ROLE`, be sure to account for it in the `Dockerfile.prod` `HEALTHCHECK` directive.
+- API relies on a cURL ping to port 5000. Workers and Beat containers gracefully bypass web server checks to prevent ECS deployment timeouts.
+
 
 ---
 

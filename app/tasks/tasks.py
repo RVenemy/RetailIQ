@@ -163,7 +163,7 @@ def rebuild_daily_aggregates(self, store_id: int, date_str: str):
 def rebuild_daily_aggregates_all_stores():
     with task_session() as session:
         stores = session.execute(text("SELECT store_id FROM stores")).fetchall()
-        today = date_type.today()
+        today = datetime.now(timezone.utc).date()
         yesterday = today - timedelta(days=1)
         for s in stores:
             rebuild_daily_aggregates.delay(s.store_id, str(today))
@@ -229,7 +229,7 @@ def evaluate_alerts(self, store_id: int):
         if not acquired:
             return
 
-        today = date_type.today()
+        today = datetime.now(timezone.utc).date()
         new_alerts = 0
 
         with task_session() as session:
@@ -462,7 +462,7 @@ def _upsert_forecast(session, store_id, product_id, result, dialect):
 
 @shared_task(bind=True, name='tasks.forecast_store', max_retries=3, default_retry_delay=120, autoretry_for=(Exception,), retry_backoff=True)
 def forecast_store(self, store_id: int):
-    lock_key = f"lock:forecast:{store_id}:{date_type.today()}"
+    lock_key = f"lock:forecast:{store_id}:{datetime.now(timezone.utc).date()}"
     with _RedisLock(lock_key, ttl=1800) as acquired:
         if not acquired:
             _log('forecast_store', store_id=store_id, status='skipped_lock_held')
@@ -502,7 +502,7 @@ def forecast_store(self, store_id: int):
 
 @shared_task(bind=True, name='tasks.run_batch_forecasting', max_retries=1)
 def run_batch_forecasting(self):
-    lock_key = f"lock:batch_forecast:{date_type.today()}"
+    lock_key = f"lock:batch_forecast:{datetime.now(timezone.utc).date()}"
     with _RedisLock(lock_key, ttl=3600) as acquired:
         if not acquired:
             return
@@ -528,12 +528,12 @@ def run_batch_forecasting(self):
 
 @shared_task(bind=True, name='tasks.detect_slow_movers', max_retries=3, default_retry_delay=120, autoretry_for=(Exception,), retry_backoff=True)
 def detect_slow_movers(self):
-    lock_key = f"lock:slow_movers:{date_type.today()}"
+    lock_key = f"lock:slow_movers:{datetime.now(timezone.utc).date()}"
     with _RedisLock(lock_key, ttl=3600) as acquired:
         if not acquired:
             return
 
-        today = date_type.today()
+        today = datetime.now(timezone.utc).date()
         week_start = today - timedelta(days=today.weekday())
         threshold_date = today - timedelta(days=30)
 
@@ -560,11 +560,11 @@ def detect_slow_movers(self):
 
 @shared_task(bind=True, name='tasks.send_weekly_digest', max_retries=3, default_retry_delay=120, autoretry_for=(Exception,), retry_backoff=True)
 def send_weekly_digest(self):
-    lock_key = f"lock:digest:{date_type.today()}"
+    lock_key = f"lock:digest:{datetime.now(timezone.utc).date()}"
     with _RedisLock(lock_key, ttl=3600) as acquired:
         if not acquired:
             return
-        today = date_type.today()
+        today = datetime.now(timezone.utc).date()
         week_start = today - timedelta(days=7)
 
         with task_session() as session:
@@ -590,12 +590,12 @@ def send_weekly_digest(self):
 
 @shared_task(bind=True, name='tasks.check_overdue_purchase_orders', max_retries=3, default_retry_delay=120, autoretry_for=(Exception,), retry_backoff=True)
 def check_overdue_purchase_orders(self):
-    lock_key = f"lock:overdue_po:{date_type.today()}"
+    lock_key = f"lock:overdue_po:{datetime.now(timezone.utc).date()}"
     with _RedisLock(lock_key, ttl=3600) as acquired:
         if not acquired:
             return
 
-        today = date_type.today()
+        today = datetime.now(timezone.utc).date()
 
         with task_session() as session:
             overdue_pos = session.execute(text("""
@@ -618,7 +618,7 @@ def check_overdue_purchase_orders(self):
 @shared_task(bind=True, name='tasks.auto_close_open_sessions', max_retries=3, default_retry_delay=120, autoretry_for=(Exception,), retry_backoff=True)
 def auto_close_open_sessions(self):
     """Daily job. Closes all OPEN staff sessions older than 16 hours."""
-    lock_key = f"lock:auto_close_sessions:{date_type.today()}"
+    lock_key = f"lock:auto_close_sessions:{datetime.now(timezone.utc).date()}"
     with _RedisLock(lock_key, ttl=3600) as acquired:
         if not acquired:
             return
@@ -642,7 +642,7 @@ def auto_close_open_sessions(self):
 @shared_task(bind=True, name='tasks.generate_staff_daily_summary', max_retries=3, default_retry_delay=120, autoretry_for=(Exception,), retry_backoff=True)
 def generate_staff_daily_summary(self):
     """Daily. Computes yesterday's actual vs target for each staff, stores in Redis cache."""
-    yesterday = date_type.today() - timedelta(days=1)
+    yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
     lock_key = f"lock:generate_staff_summary:{yesterday}"
 
     with _RedisLock(lock_key, ttl=3600) as acquired:

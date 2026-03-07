@@ -93,7 +93,8 @@ def get_transactions():
 
     if role == 'staff':
         # Enforce today only
-        today = date.today()
+        from datetime import timezone
+        today = datetime.now(timezone.utc).date()
         query = query.filter(func.date(Transaction.created_at) == today)
     else:
         if start_date:
