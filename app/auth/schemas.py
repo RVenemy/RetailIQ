@@ -6,7 +6,7 @@ class RegisterSchema(Schema):
     password = fields.String(required=True, validate=validate.Length(min=6))
     full_name = fields.String(required=True, validate=validate.Length(min=2, max=100))
     store_name = fields.String(required=False, validate=validate.Length(max=100))
-    email = fields.Email(required=False)
+    email = fields.Email(required=True)
     role = fields.String(required=False, validate=validate.OneOf(['owner', 'staff'])) # usually registration is owner, but allowing flexibility
 
 class LoginSchema(Schema):

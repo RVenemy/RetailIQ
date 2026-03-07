@@ -10,6 +10,9 @@ venv/
 .venv/
 env/
 
+# Local AWS configurations
+aws/task-definitions/*.local.json
+
 # Environment files
 .env
 

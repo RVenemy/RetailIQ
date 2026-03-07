@@ -10,7 +10,13 @@ def main() -> int:
     timeout_seconds = int(os.environ.get("DB_WAIT_TIMEOUT", "60"))
     interval_seconds = float(os.environ.get("DB_WAIT_INTERVAL", "2"))
 
-    engine = create_engine(database_url, pool_pre_ping=True)
+    connect_args = {}
+    if "sslmode=require" in database_url.lower():
+        # Remove from URL as create_engine doesn't like it in the query string sometimes
+        database_url = database_url.replace("?sslmode=require", "").replace("&sslmode=require", "")
+        connect_args = {"sslmode": "require"}
+
+    engine = create_engine(database_url, pool_pre_ping=True, connect_args=connect_args)
     deadline = time.time() + timeout_seconds
 
     while time.time() < deadline:

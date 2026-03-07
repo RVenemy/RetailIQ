@@ -33,7 +33,7 @@ on:
       skip_tests:
         description: 'Skip test job (emergency hotfix only)'
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 concurrency:
@@ -191,13 +191,11 @@ jobs:
           aws ecs describe-task-definition \
             --task-definition ${{ secrets[matrix.service.task_def_secret] }} \
             --query taskDefinition \
-            > task-definition.json
-
       - name: Update task definition with new image
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: task-definition.json
+          task-definition: aws/task-definitions/api.json
           container-name: retailiq-${{ matrix.service.name }}
           image: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
 
@@ -233,7 +231,7 @@ jobs:
           echo "| **Triggered by** | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
 
       - name: Notify Slack (success)
-        if: needs.deploy.result == 'success' && secrets.SLACK_WEBHOOK_URL
+        if: needs.deploy.result == 'success' && env.SLACK_WEBHOOK_URL
         uses: slackapi/slack-github-action@v1.25.0
         with:
           payload: |
@@ -253,7 +251,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Notify Slack (failure)
-        if: needs.deploy.result == 'failure' && secrets.SLACK_WEBHOOK_URL
+        if: needs.deploy.result == 'failure' && env.SLACK_WEBHOOK_URL
         uses: slackapi/slack-github-action@v1.25.0
         with:
           payload: |

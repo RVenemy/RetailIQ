@@ -58,9 +58,9 @@ def register():
 
     db.session.commit()
 
-    generate_otp(new_user.mobile_number)
+    generate_otp(new_user.mobile_number, email=new_user.email)
 
-    return format_response(True, data={"message": "OTP sent successfully."}), 201
+    return format_response(True, data={"message": "OTP sent to your email."}), 201
 
 @auth_bp.route('/verify-otp', methods=['POST'])
 def verify_otp_endpoint():
@@ -172,9 +172,9 @@ def forgot_password():
 
     user = db.session.query(User).filter_by(mobile_number=data['mobile_number']).first()
     if user:
-        generate_reset_token(user.user_id)
+        generate_reset_token(user.user_id, email=user.email)
 
-    return format_response(True, data={"message": "If registered, a reset link/token will be generated."}), 200
+    return format_response(True, data={"message": "If registered, a password reset email will be sent."}), 200
 
 @auth_bp.route('/reset-password', methods=['POST'])
 def reset_password():

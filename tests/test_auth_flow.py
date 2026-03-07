@@ -84,6 +84,7 @@ def test_verify_otp_returns_auth_tokens(client, app, monkeypatch):
         "mobile_number": "9222222222",
         "password": "secret123",
         "store_name": "OTP Store",
+        "email": "otp_test@example.com",
     })
     assert register_resp.status_code == 201
 

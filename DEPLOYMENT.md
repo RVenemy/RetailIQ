@@ -142,6 +142,10 @@ awk 'NF {sub(/\r/, ""); printf "%s\\n", $0}' jwt_public.pem
 > Never commit `.pem` files or actual secret values into source control.
 > Use AWS Secrets Manager or SSM Parameter Store to inject secrets into ECS task definitions.
 
+### Update the ECS Service
+
+We use the AWS CLI to update the service to use the new task definition revision. The task definitions are stored in `aws/task-definitions/*.json`.
+
 ---
 
 ## 3. Production Dockerfile
@@ -166,8 +170,7 @@ The production image is defined in [`Dockerfile.prod`](file:///d:/Files/Desktop/
 ---
 
 ## 4. Entrypoint & Migration Safety
-
-The entrypoint script [`scripts/entrypoint.sh`](file:///d:/Files/Desktop/Integration-TyProj/RetailIQ/scripts/entrypoint.sh) handles all three service roles.
+See [`scripts/entrypoint.sh`](./scripts/entrypoint.sh). handles all three service roles.
 
 ### Migration Race Prevention
 
@@ -282,7 +285,12 @@ aws elasticache create-replication-group \
   --transit-encryption-enabled \
   --at-rest-encryption-enabled \
   --automatic-failover-enabled false
-```
+
+ ### ElastiCache Security
+* **Subnets:** Run Redis clusters in private subnets with no public IP addressing.
+* **In-transit Encryption:** Enable **TLS** (`TransitEncryptionEnabled: true`). Connections must use `rediss://` (double-s) instead of `redis://`. The `entrypoint.sh` script must pass `ssl_cert_reqs='none'` directly to `redis-py` (via url query parameters) because AWS managed certificates sometimes fail validation in Alpine/Debian slim environments.
+* **At-rest Encryption:** Enable encryption at rest.
+* **Auth Token:** Utilize Redis Auth string for access.
 
 > [!NOTE]
 > With `transit-encryption-enabled`, connection strings use `rediss://` (double 's').
@@ -841,9 +849,13 @@ graph LR
 | `ECS_API_SERVICE` | `retailiq-api` |
 | `ECS_WORKER_SERVICE` | `retailiq-worker` |
 | `ECS_BEAT_SERVICE` | `retailiq-beat` |
-| `ECS_API_TASK_DEF` | `retailiq-api` |
+| `ECS_API_TASK_DEF` | `retailiq-api` (family name) |
 | `ECS_WORKER_TASK_DEF` | `retailiq-worker` |
 | `ECS_BEAT_TASK_DEF` | `retailiq-beat` |
+
+The `deploy.yml` workflow automatically:
+1. Downloads the current task definition
+2. Updates the `image` field using `aws-actions/amazon-ecs-render-task-definition` via `aws/task-definitions/*.json`
 
 ### IAM Policy for CI/CD User
 

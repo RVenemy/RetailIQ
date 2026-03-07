@@ -178,6 +178,10 @@ def create_app(config=None):
     app.config['RATELIMIT_STORAGE_URI'] = os.environ.get('REDIS_URL', 'redis://redis:6379/0')
     app.config['RATELIMIT_DEFAULT'] = '300/minute'
 
+    # ── Email (Gmail SMTP) ──────────────────────────────────────────────
+    app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', '')
+    app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
+
     # Disable debug in production
     if is_production:
         app.config['DEBUG'] = False

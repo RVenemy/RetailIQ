@@ -1,6 +1,8 @@
 # RetailIQ — Retail Data Platform
 
-RetailIQ is a modular backend platform for retail operations intelligence. It combines:
+RetailIQ is a modular backend platform for retail operations intelligence. It is built as an **AWS-first, cloud-native application** deployed on **Amazon ECS Fargate** with a managed PostgreSQL (RDS) and Redis (ElastiCache) backend.
+
+It combines:
 - transactional APIs (auth, store, inventory, transactions, customers),
 - analytics APIs backed by aggregate tables,
 - forecasting (store + SKU),
@@ -16,7 +18,20 @@ RetailIQ is a modular backend platform for retail operations intelligence. It co
 - **security hardening** (rate limiting, FK index audit, input sanitization, log redaction, slow-request detection),
 - asynchronous background processing with Celery.
 
-The platform is designed to run locally and in containerized environments with PostgreSQL + Redis.
+---
+
+## 🚀 Quick Start (Production)
+
+The API is live on AWS ECS Fargate and accessible via the Application Load Balancer:
+
+```bash
+# Health Check Endpoint
+curl http://retailiq-alb-1647913544.us-east-1.elb.amazonaws.com/api/v1/health
+```
+
+**Auto-Deployment**: Merging or pushing to the `main` branch automatically triggers the `.github/workflows/deploy.yml` pipeline which runs 250+ tests, builds the multi-stage Docker image, pushes to Amazon ECR, and performs a zero-downtime rolling update across the three ECS services (API, Worker, Beat).
+
+For detailed AWS architecture, security, cost optimization, and CI/CD secrets setup, read the full [**AWS Deployment Guide (DEPLOYMENT.md)**](./DEPLOYMENT.md).
 
 ---
 
@@ -41,7 +56,7 @@ The platform is designed to run locally and in containerized environments with P
 18. [Vision / OCR Invoice Processing Module](#vision--ocr-invoice-processing-module)
 19. [Security & Performance Hardening](#security--performance-hardening)
 20. [Configuration and Environment Variables](#configuration-and-environment-variables)
-21. [Running the System](#running-the-system)
+21. [Local Development](#local-development)
 22. [Testing Strategy](#testing-strategy)
 23. [CI/CD](#cicd)
 24. [Operations and Troubleshooting](#operations-and-troubleshooting)
@@ -55,7 +70,7 @@ The platform is designed to run locally and in containerized environments with P
 RetailIQ is built as a Flask app using SQLAlchemy models and blueprint modules. It exposes versioned APIs under `/api/v1/...`, persists operational data in PostgreSQL, and offloads compute-heavy/periodic workflows to Celery workers.
 
 ### Core Capabilities
-- **Auth + access control**: JWT-based auth with role gating (`owner`, `staff`).
+- **Auth + access control**: JWT-based auth with role gating (`owner`, `staff`). Email-based OTP verification via Gmail SMTP.
 - **Operational APIs**: inventory, transactions, customers, store configuration.
 - **Analytics**: revenue/profit/category/payment/contribution views, mostly from aggregate tables.
 - **Suppliers & POs**: Track active suppliers, linked products, purchase orders, and goods receipts.
@@ -107,6 +122,7 @@ This enables reliable first-run startup in Dockerized environments.
 ```text
 app/
   __init__.py                # Flask app factory, extension init, blueprint registration
+  email.py                   # Gmail SMTP email service (OTP + password reset emails)
   models/                    # SQLAlchemy schema (core tables + aggregate tables)
   auth/                      # registration/login/otp/refresh/logout/password reset
   store/                     # store profile + categories + tax config
@@ -165,6 +181,13 @@ tests/
 - Refresh token lifecycle uses Redis token-keyed records with 30-day TTL.
 - Access tokens (JWT/RS256) expire after 2 hours; clients must use `/auth/refresh` to renew.
 - **Auto-login on signup**: `POST /auth/verify-otp` activates the account AND returns full auth tokens (`access_token`, `refresh_token`, `user_id`, `role`, `store_id`) — same shape as the login response. This allows mobile clients to skip the manual login step after registration.
+
+### Email-Based OTP Verification
+- **Registration requires `email`** — the `RegisterSchema` enforces `email` as a required field.
+- **OTP delivery**: On registration, a 6-digit OTP is stored in Redis (300s TTL) and emailed to the user via Gmail SMTP. The email contains a branded HTML template with the verification code.
+- **Password reset**: The `forgot-password` endpoint generates a UUID token (600s TTL), stores it in Redis, and emails a branded reset email to the user's registered email address.
+- **Dev fallback**: When `MAIL_USERNAME`/`MAIL_PASSWORD` are not configured (local dev), emails are logged to the console instead of being sent via SMTP.
+- **Email service** (`app/email.py`): Uses Python's built-in `smtplib` with TLS for Gmail SMTP (`smtp.gmail.com:587`). No additional dependencies required.
 
 ---
 
@@ -512,14 +535,17 @@ Common variables:
 - `JWT_PRIVATE_KEY`
 - `JWT_PUBLIC_KEY`
 - `SECRET_KEY`
+- `MAIL_USERNAME` — Gmail address used as the OTP/reset email sender
+- `MAIL_PASSWORD` — Gmail App Password (16-char, generated from [Google Account → App Passwords](https://myaccount.google.com/apppasswords))
 
 ### Notes
 - In non-test environments, provide stable JWT keys (do not rely on ephemeral generated keys).
 - For production, use a secret manager and avoid committing real secrets.
+- `MAIL_USERNAME` and `MAIL_PASSWORD` are optional in development (emails fall back to console output). In production, they are stored in AWS Secrets Manager (`retailiq/prod/mail-username`, `retailiq/prod/mail-password`).
 
 ---
 
-## Running the System
+## Local Development
 
 ## Option A: Docker (recommended)
 
@@ -570,8 +596,9 @@ pytest -q
 ```bash
 pytest -q
 pytest -q tests/test_transactions.py tests/test_audit.py tests/test_auth_flow.py
-pytest tests/test_security.py -v   # security hardening tests
-pytest tests/test_e2e.py -v        # end-to-end integration tests
+pytest tests/test_email_service.py -v  # email/OTP integration tests
+pytest tests/test_security.py -v       # security hardening tests
+pytest tests/test_e2e.py -v            # end-to-end integration tests
 ```
 
 ### Security Tests (`tests/test_security.py`)
@@ -849,6 +876,20 @@ A `logging.Filter` attached to the Flask app logger and the root logger redacts 
 In development mode (`FLASK_ENV=development` and not `TESTING`):
 - `SQLALCHEMY_ECHO=True` logs all SQL queries.
 - An `@app.after_request` hook logs `[SLOW REQUEST] {method} {path} took {time}ms` for any response taking >500ms.
+
+---
+
+## AWS Deployment & CI/CD
+
+RetailIQ is fully documented for production deployment on **AWS ECS Fargate**.
+
+The repository includes:
+- Multi-stage `Dockerfile.prod`
+- ECS Task Definitions (`aws/task-definitions/`)
+- IAM roles and CloudWatch alarms (`aws/iam/`, `aws/cloudwatch/`)
+- Full GitHub Actions CI/CD pipeline (`.github/workflows/deploy.yml`)
+
+For the comprehensive step-by-step guide, including architecture diagrams, cost optimization, security hardening, and troubleshooting, see the [**AWS Deployment Guide (DEPLOYMENT.md)**](./DEPLOYMENT.md).
 
 ---
 

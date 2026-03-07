@@ -54,12 +54,25 @@ def generate_refresh_token(user_id):
     redis_client.setex(f"refresh_token:{token}", 30 * 24 * 3600, user_id)
     return token
 
-def generate_otp(mobile_number):
+def generate_otp(identifier, email=None):
+    """Generate a 6-digit OTP, store in Redis, and (optionally) email it.
+
+    Args:
+        identifier: The Redis key suffix (mobile_number).
+        email: If provided, sends the OTP to this email address.
+    """
+    from app.email import send_otp_email
+
     redis_client = get_redis_client()
     otp = ''.join(random.choices(string.digits, k=6))
     # 300s TTL
-    redis_client.setex(f"otp:{mobile_number}", 300, otp)
-    print(f"[DEV] OTP for {mobile_number}: {otp}")
+    redis_client.setex(f"otp:{identifier}", 300, otp)
+
+    if email:
+        send_otp_email(email, otp)
+    else:
+        print(f"[DEV] OTP for {identifier}: {otp}")
+
     return otp
 
 def verify_otp(mobile_number, otp):
@@ -71,12 +84,25 @@ def verify_otp(mobile_number, otp):
         return True
     return False
 
-def generate_reset_token(user_id):
+def generate_reset_token(user_id, email=None):
+    """Generate a password-reset token, store in Redis, and (optionally) email it.
+
+    Args:
+        user_id: The user ID to associate with the reset token.
+        email: If provided, sends the reset token to this email address.
+    """
+    from app.email import send_password_reset_email
+
     redis_client = get_redis_client()
     token = str(uuid.uuid4())
     # 10 mins TTL
     redis_client.setex(f"reset:{token}", 600, user_id)
-    print(f"[DEV] Password Reset Token for user {user_id}: {token}")
+
+    if email:
+        send_password_reset_email(email, token)
+    else:
+        print(f"[DEV] Password Reset Token for user {user_id}: {token}")
+
     return token
 
 def verify_reset_token(token):

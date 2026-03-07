@@ -24,10 +24,19 @@ run_migrations() {
 
     # Use a simple Redis-based lock to prevent multiple API containers from
     # running migrations simultaneously during a rolling deployment.
+    # NOTE: ElastiCache with TransitEncryption requires ssl_cert_reqs=none
     python -c "
 import os, sys, time, redis as r
+
 url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-client = r.Redis.from_url(url, decode_responses=True)
+
+# ElastiCache TLS: skip cert verification for AWS-managed certs
+kwargs = dict(decode_responses=True, socket_connect_timeout=10, socket_timeout=10)
+if url.startswith('rediss://'):
+    import ssl
+    kwargs['ssl_cert_reqs'] = 'none'
+
+client = r.Redis.from_url(url, **kwargs)
 lock_key = 'lock:alembic_migration'
 lock_ttl = 300  # 5 minutes
 
@@ -57,7 +66,10 @@ else:
         python -c "
 import os, redis as r
 url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-client = r.Redis.from_url(url, decode_responses=True)
+kwargs = dict(decode_responses=True, socket_connect_timeout=10, socket_timeout=10)
+if url.startswith('rediss://'):
+    kwargs['ssl_cert_reqs'] = 'none'
+client = r.Redis.from_url(url, **kwargs)
 client.delete('lock:alembic_migration')
 print('[entrypoint] Migration lock released.')
 "
