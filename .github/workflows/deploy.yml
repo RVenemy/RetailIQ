@@ -195,7 +195,7 @@ jobs:
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: aws/task-definitions/api.json
+          task-definition: aws/task-definitions/${{ matrix.service.name }}.json
           container-name: retailiq-${{ matrix.service.name }}
           image: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
 
