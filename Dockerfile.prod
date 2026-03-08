@@ -59,8 +59,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --no-index --find-links=/tmp/wheels -r requirements.txt \
     && rm -rf /tmp/wheels
 
-# Create non-root user
-RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
+# Create non-root user and ensure /app ownership
+RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser && \
+    chown appuser:appuser /app
 
 # Copy application code
 COPY --chown=appuser:appuser . .
