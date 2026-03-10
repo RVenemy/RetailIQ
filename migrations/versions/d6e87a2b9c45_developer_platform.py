@@ -72,7 +72,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("client_id"),
     )
-    op.create_index("idx_dev_app_client_id", "developer_applications", ["client_id"])
+    op.create_index("idx_dev_app_client_id", "developer_applications", ["client_id"], unique=True)
 
     # ── API Usage Records ────────────────────────────────────────────────────
     op.create_table(

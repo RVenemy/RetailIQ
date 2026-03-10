@@ -17,8 +17,15 @@ RetailIQ is a **planet-scale retail operations intelligence platform**. It is bu
 - **event-aware forecasting** (business event calendar, Prophet external regressors, demand sensing log, **Ensemble XGBoost/LSTM/Prophet engine**),
 - **vision / OCR invoice processing** (Tesseract OCR, product fuzzy-matching, human review flow, **YOLOv8 Shelf Analytics**, **TrOCR Receipt Digitization**, **Loss Prevention Detection**),
 - **Narrow Retail AI/ML Models** (LLaMA 7B RAG Assistant, Two-tower Recommendation Engine, Bayesian Dynamic Pricing, Deep Demand Forecasting),
-- **security hardening** (rate limiting, FK index audit, input sanitization, log redaction, slow-request detection),
-- asynchronous background processing with Celery.
+- **security hardening**: rate limiting (429 return codes), FK index audit, input sanitization, automated security scans (`bandit`, `pip-audit`), schema-migration sync.
+- **asynchronous background processing**: Celery-based workflow with multi-regional support.
+
+---
+
+## 🏗️ Technical Highlights
+- **Rate Limit Integrity**: Guaranteed correct `429 Too Many Requests` status codes via centralized `HTTPException` handling.
+- **Docker Optimization**: Optimized production build using CPU-only PyTorch indices, reducing image overhead and ensuring CI build stability.
+- **Schema Resilience**: Continuous Alembic migration checks integrated into CI to prevent schema drift.
 
 ---
 
@@ -797,6 +804,8 @@ Multi-step user journey tests that span multiple endpoints and simulate Celery t
 - **Linter**: We use `ruff` for extremely fast linting and formatting. Always run `ruff --fix .` before committing.
 - **Type Hints**: All new code MUST include Python type hints for clarity and static analysis.
 - **Error Handling**: Use the `HTTPException` handler in `app/__init__.py`. Return `429` for rate limits, `422` for validation errors, and `500` only for truly unhandled exceptions.
+- **Migration Workflow**: All schema changes MUST be accompanied by a manual or auto-generated Alembic migration. Run `alembic check` locally to ensure no missing fields are detected.
+- **Docker Build**: Optimized for CI speed using `--extra-index-url https://download.pytorch.org/whl/cpu`.
 
 ### Data Modeling & Migrations
 - **Models**: Core models live in `app/models/__init__.py`. External or secondary models should be integrated via `missing_models.py` or separate files but MUST be imported in the main models init to be detected by Alembic.

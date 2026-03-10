@@ -8,6 +8,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -60,6 +61,10 @@ class DeveloperApplication(Base):
     webhook_secret: Mapped[str | None] = mapped_column(String(128))
     created_at: Mapped[datetime | None] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+    __table_args__ = (
+        Index("idx_dev_app_client_id", "client_id", unique=True),
+    )
+
 
 class MarketplaceApp(Base):
     __tablename__ = "marketplace_apps"
@@ -104,6 +109,10 @@ class APIUsageRecord(Base):
     avg_latency_ms: Mapped[float | None] = mapped_column(Numeric(10, 2))
     p99_latency_ms: Mapped[float | None] = mapped_column(Numeric(10, 2))
     bytes_transferred: Mapped[int | None] = mapped_column(BigInteger)
+
+    __table_args__ = (
+        Index("idx_usage_app_minute", "app_id", "minute_bucket"),
+    )
 
 
 class WebhookEvent(Base):
