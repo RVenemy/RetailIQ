@@ -23,7 +23,9 @@ def upgrade() -> None:
     op.add_column("users", sa.Column("mfa_enabled", sa.Boolean(), server_default=sa.text("false"), nullable=False))
     op.add_column("users", sa.Column("mfa_secret", sa.String(length=64), nullable=True))
     op.add_column("users", sa.Column("last_login_at", sa.TIMESTAMP(), nullable=True))
-    op.add_column("users", sa.Column("failed_login_attempts", sa.Integer(), server_default=sa.text("0"), nullable=False))
+    op.add_column(
+        "users", sa.Column("failed_login_attempts", sa.Integer(), server_default=sa.text("0"), nullable=False)
+    )
     op.add_column("users", sa.Column("locked_until", sa.TIMESTAMP(), nullable=True))
     # ### end Alembic commands ###
 
