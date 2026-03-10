@@ -174,7 +174,6 @@ RetailIQ is evolving from a single-region ECS setup to a global, distributed arc
 - **CockroachDB Cluster**: Multi-region distributed SQL with row-level geo-partitioning.
 - **Redis Cluster**: Global caching with local-read optimization.
 - **Kafka**: Real-time event streaming and message brokering.
->>>>>>> bad8c750044d900333d20dd8e7d6ba1d491fa3ed
 
 ### Observability Stack
 - **Prometheus + Grafana**: SLA monitoring (Availability, p99 Latency, Cost/1M requests).
@@ -1283,7 +1282,6 @@ The repository includes:
 - Full GitHub Actions CI/CD pipeline (`.github/workflows/deploy.yml`)
 
 For the comprehensive step-by-step guide, including architecture diagrams, cost optimization, security hardening, and troubleshooting, see the [**AWS Deployment Guide (DEPLOYMENT.md)**](./DEPLOYMENT.md).
->>>>>>> bad8c750044d900333d20dd8e7d6ba1d491fa3ed
 
 ---
 
@@ -1291,6 +1289,49 @@ For the comprehensive step-by-step guide, including architecture diagrams, cost 
 1. Create a branch (`feature/your-feature-name`).
 2. Implement code + tests. Ensure code coverage remains high.
 3. Open a Pull Request detailing the architecture impact, database changes, and rollback plan.
+
+---
+
+## Comprehensive Developer and Engineer Guide
+
+This guide provides technical deep-dives for engineers contributing to RetailIQ.
+
+### 1. Development Principles
+- **Domain-Driven Design (DDD)**: Each module (e.g., `inventory`, `transactions`) should encapsulate its own domain logic and models.
+- **Fail-Fast Validation**: Use Marshmallow schemas to validate all incoming request data at the ingestion point.
+- **Async by Default**: Offload any operation taking >200ms or involving external APIs to Celery.
+- **Schema First**: All database changes must be managed via Alembic migrations.
+
+### 2. Service Layer Pattern
+Routes should remain thin. Complex business logic (e.g., price history logging, alert evaluation) belongs in the module's `services.py`.
+Example:
+```python
+# app/inventory/routes.py
+@inventory_bp.route("/products", methods=["POST"])
+def create_product():
+    data = ProductCreateSchema().load(request.json)
+    product = ProductService.create_new_product(data)
+    return standard_json(data=ProductSchema().dump(product), status_code=201)
+```
+
+### 3. Error Handling & Responses
+Always use `app.utils.responses.standard_json` to return data. This ensures the frontend receives a predictable JSON envelope:
+```json
+{
+  "success": true,
+  "message": "Operation successful",
+  "data": { ... },
+  "error": null
+}
+```
+
+### 4. Testing
+- **E2E Tests**: Use `tests/test_e2e.py` for long-running user journeys.
+- **Mocking**: Use `pytest-mock` to mock external services (e.g., WhatsApp Meta API).
+- **Environment**: Tests run against an in-memory SQLite database. Avoid PG-specific syntax in core logic unless guarded by dialect checks.
+
+### 5. Deployment
+Changes merged to `main` are automatically deployed to AWS ECS. Ensure `alembic upgrade head` is part of the deployment script.
 
 ---
 

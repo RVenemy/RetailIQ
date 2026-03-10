@@ -106,6 +106,7 @@ def create_product():
         barcode=data.get("barcode"),
         image_url=data.get("image_url"),
         lead_time_days=data.get("lead_time_days", 3),
+        hsn_code=data.get("hsn_code"),
         is_active=True,
     )
 

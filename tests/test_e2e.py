@@ -485,7 +485,7 @@ def test_gst_month_compilation(client, app, test_store, test_owner, owner_header
     with app.app_context():
         headers = owner_headers
         sid = test_store.store_id
-        period = datetime.now(timezone.utc).strftime("%Y-%m-%d")  # Changed to include day
+        period = datetime.now(timezone.utc).strftime("%Y-%m")
 
         # Enable GST via direct ORM (avoids GSTIN checksum complexity)
         config = StoreGSTConfig(
@@ -506,7 +506,7 @@ def test_gst_month_compilation(client, app, test_store, test_owner, owner_header
             _db.session.add(h)
         _db.session.commit()
 
-        # Create 2 products with different HSN codes (and 1 without for variety)
+        # Create 2 products with different HSN codes via API
         product_ids = {}
         for name, hsn, cost, sell in [
             ("Basmati Rice", "1006", 60, 80),
@@ -521,14 +521,11 @@ def test_gst_month_compilation(client, app, test_store, test_owner, owner_header
                     "selling_price": sell,
                     "current_stock": 200,
                     "category_id": test_category.category_id,
+                    "hsn_code": hsn,  # Include HSN code in the creation request
                 },
             )
             assert resp.status_code == 201
-            pid = resp.json["data"]["product_id"]
-            p = _db.session.query(Product).filter_by(product_id=pid).first()
-            p.hsn_code = hsn
-            product_ids[name] = pid
-        _db.session.commit()
+            product_ids[name] = resp.json["data"]["product_id"]
 
         pid_rice = product_ids["Basmati Rice"]
         pid_cream = product_ids["Face Cream"]

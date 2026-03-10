@@ -14,6 +14,7 @@ class ProductCreateSchema(Schema):
     barcode = fields.Str(load_default=None)
     image_url = fields.Str(load_default=None)
     lead_time_days = fields.Int(load_default=3)
+    hsn_code = fields.Str(load_default=None, allow_none=True)
 
     @validates_schema
     def validate_prices(self, data, **kwargs):
