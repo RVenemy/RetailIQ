@@ -552,7 +552,7 @@ def _upsert_forecast(session, store_id, product_id, result, dialect):
     retry_backoff=True,
 )
 def forecast_store(self, store_id: int):
-    lock_key = f"lock:forecast:{store_id}:{date_type.today()}"
+    lock_key = f"lock:forecast:{store_id}:{datetime.now(timezone.utc).date()}"
     with _RedisLock(lock_key, ttl=1800) as acquired:
         if not acquired:
             _log("forecast_store", store_id=store_id, status="skipped_lock_held")
@@ -592,7 +592,7 @@ def forecast_store(self, store_id: int):
 
 @shared_task(bind=True, name="tasks.run_batch_forecasting", max_retries=1)
 def run_batch_forecasting(self):
-    lock_key = f"lock:batch_forecast:{date_type.today()}"
+    lock_key = f"lock:batch_forecast:{datetime.now(timezone.utc).date()}"
     with _RedisLock(lock_key, ttl=3600) as acquired:
         if not acquired:
             return
@@ -625,7 +625,7 @@ def run_batch_forecasting(self):
     retry_backoff=True,
 )
 def detect_slow_movers(self):
-    lock_key = f"lock:slow_movers:{date_type.today()}"
+    lock_key = f"lock:slow_movers:{datetime.now(timezone.utc).date()}"
     with _RedisLock(lock_key, ttl=3600) as acquired:
         if not acquired:
             return
@@ -668,7 +668,7 @@ def detect_slow_movers(self):
     retry_backoff=True,
 )
 def send_weekly_digest(self):
-    lock_key = f"lock:digest:{date_type.today()}"
+    lock_key = f"lock:digest:{datetime.now(timezone.utc).date()}"
     with _RedisLock(lock_key, ttl=3600) as acquired:
         if not acquired:
             return
@@ -753,7 +753,7 @@ def check_overdue_purchase_orders(self):
 )
 def auto_close_open_sessions(self):
     """Daily job. Closes all OPEN staff sessions older than 16 hours."""
-    lock_key = f"lock:auto_close_sessions:{date_type.today()}"
+    lock_key = f"lock:auto_close_sessions:{datetime.now(timezone.utc).date()}"
     with _RedisLock(lock_key, ttl=3600) as acquired:
         if not acquired:
             return
@@ -789,7 +789,7 @@ def auto_close_open_sessions(self):
 )
 def generate_staff_daily_summary(self):
     """Daily. Computes yesterday's actual vs target for each staff, stores in Redis cache."""
-    yesterday = date_type.today() - timedelta(days=1)
+    yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
     lock_key = f"lock:generate_staff_summary:{yesterday}"
 
     with _RedisLock(lock_key, ttl=3600) as acquired:

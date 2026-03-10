@@ -201,7 +201,7 @@ def test_zero_velocity_with_high_margin_lowers_suggestion(app, test_store, test_
             profit=240.0,
         )
         db.session.add(row)
-    # Last 14 days: zero sales (no rows → sum = 0)
+    # Last 16 days: zero sales (no rows → sum = 0)
     db.session.commit()
 
     # Seed store summary so anomaly check doesn't trigger

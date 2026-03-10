@@ -18,6 +18,28 @@ wait_for_db() {
     log "PostgreSQL is ready."
 }
 
+# ── Normalize Redis URLs for SSL ──────────────────────────────────────────
+# ElastiCache TLS requires ?ssl_cert_reqs=none in the URL for redis-py/celery
+normalize_redis_urls() {
+    if [[ "${REDIS_URL:-}" == rediss://* ]] && [[ "${REDIS_URL}" != *ssl_cert_reqs=* ]]; then
+        log "Appending ssl_cert_reqs=none to REDIS_URL"
+        if [[ "${REDIS_URL}" == *\?* ]]; then
+            export REDIS_URL="${REDIS_URL}&ssl_cert_reqs=none"
+        else
+            export REDIS_URL="${REDIS_URL}?ssl_cert_reqs=none"
+        fi
+    fi
+
+    if [[ "${CELERY_BROKER_URL:-}" == rediss://* ]] && [[ "${CELERY_BROKER_URL}" != *ssl_cert_reqs=* ]]; then
+        log "Appending ssl_cert_reqs=none to CELERY_BROKER_URL"
+        if [[ "${CELERY_BROKER_URL}" == *\?* ]]; then
+            export CELERY_BROKER_URL="${CELERY_BROKER_URL}&ssl_cert_reqs=none"
+        else
+            export CELERY_BROKER_URL="${CELERY_BROKER_URL}?ssl_cert_reqs=none"
+        fi
+    fi
+}
+
 # ── Run Alembic migrations (with Redis distributed lock) ───────────────────
 run_migrations() {
     log "Attempting to acquire migration lock …"
@@ -87,6 +109,7 @@ print('[entrypoint] Migration lock released.')
 case "$SERVICE_ROLE" in
 
     api)
+        normalize_redis_urls
         wait_for_db
         run_migrations
         log "Starting Gunicorn API server …"
@@ -94,6 +117,7 @@ case "$SERVICE_ROLE" in
         ;;
 
     worker)
+        normalize_redis_urls
         wait_for_db
         CELERY_CONCURRENCY="${CELERY_CONCURRENCY:-4}"
         CELERY_QUEUES="${CELERY_QUEUES:-celery}"
@@ -109,10 +133,13 @@ case "$SERVICE_ROLE" in
         ;;
 
     beat)
+        normalize_redis_urls
         wait_for_db
-        log "Starting Celery Beat scheduler …"
+        log "Starting Celery Beat scheduler (using /tmp for schedule) …"
         exec celery -A celery_worker.celery_app beat \
-            --loglevel=info
+            --loglevel=info \
+            --pidfile=/tmp/celerybeat.pid \
+            --schedule=/tmp/celerybeat-schedule
         ;;
 
     *)

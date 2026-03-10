@@ -485,7 +485,7 @@ def test_gst_month_compilation(client, app, test_store, test_owner, owner_header
     with app.app_context():
         headers = owner_headers
         sid = test_store.store_id
-        period = datetime.now(timezone.utc).date().strftime("%Y-%m")
+        period = datetime.now(timezone.utc).strftime("%Y-%m-%d")  # Changed to include day
 
         # Enable GST via direct ORM (avoids GSTIN checksum complexity)
         config = StoreGSTConfig(

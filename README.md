@@ -174,6 +174,7 @@ RetailIQ is evolving from a single-region ECS setup to a global, distributed arc
 - **CockroachDB Cluster**: Multi-region distributed SQL with row-level geo-partitioning.
 - **Redis Cluster**: Global caching with local-read optimization.
 - **Kafka**: Real-time event streaming and message brokering.
+>>>>>>> bad8c750044d900333d20dd8e7d6ba1d491fa3ed
 
 ### Observability Stack
 - **Prometheus + Grafana**: SLA monitoring (Availability, p99 Latency, Cost/1M requests).
@@ -1105,6 +1106,184 @@ Deployments are automated via GitHub Actions `.github/workflows/deploy.yml`. The
 
 ### Contributing Guidelines
 All PRs require strict linting (Ruff), security audits (Bandit), and comprehensive Pytest pass rates. No undocumented endpoints will be merged. Use standard standard_json responses universally.
+
+## 5) Managing Docker Healthchecks
+
+RetailIQ uses a **two-layer healthcheck strategy** to prevent ECS deployment timeouts:
+
+1. **Dockerfile-level** (`Dockerfile.prod`): The `HEALTHCHECK` directive is conditional on `SERVICE_ROLE`. API containers cURL port 5000; workers and beat bypass with `exit 0`.
+2. **ECS task-definition-level** (`aws/task-definitions/*.json`): The `worker.json` and `beat.json` task definitions include an explicit `healthCheck` block (`echo healthy`) that **overrides** the Dockerfile HEALTHCHECK entirely. This guarantees ECS marks the container as healthy immediately, avoiding deployment timeout race conditions between `wait_for_db`, the container startup period, and ECS stability checks.
+
+**If you add a new service role:**
+- Add a case in `scripts/entrypoint.sh` for the new role.
+- Account for it in the `Dockerfile.prod` HEALTHCHECK conditional.
+- Create a new `aws/task-definitions/<role>.json` with an explicit `healthCheck` block (use `echo healthy` for non-HTTP services).
+
+
+---
+
+## Production Readiness Checklist
+
+Before deployment, ensure all are true:
+- [ ] `pytest -q` passes fully.
+- [ ] migrations apply cleanly on fresh DB and existing env.
+- [ ] secrets managed externally (no plaintext secrets in repo).
+- [ ] stable JWT key management strategy in place.
+- [ ] log aggregation and monitoring configured.
+- [x] rate limits applied on auth and all endpoints.
+- [x] sensitive data log filter in place.
+- [ ] backup/restore validated for PostgreSQL.
+- [x] rate limits and auth policies reviewed.
+- [ ] worker + beat autoscaling and queue policies defined.
+- [ ] rollback strategy documented.
+
+---
+
+## Event-Aware Forecasting Module
+
+The event-aware forecasting engine extends Prophet with a **business event calendar** so that upcoming holidays, promotions, and closures influence demand predictions as external regressors.
+
+### Architecture
+
+```
+GET /events                 →  list / filter events
+POST /events                →  create event
+PUT  /events/{id}           →  update event
+DELETE /events/{id}         →  delete event
+GET /events/upcoming?days=N →  next N days of events
+GET /forecasting/demand-sensing/{product_id}
+                            →  run event-adjusted forecast (14-day), log to demand_sensing_log
+```
+
+### How It Works
+
+1. **Event Registry** — `BusinessEvent` stores events with `start_date`, `end_date`, `event_type` (`HOLIDAY | FESTIVAL | PROMOTION | SALE_DAY | CLOSURE`), and optional `expected_impact_pct`.
+2. **Regressor Injection** — `generate_demand_forecast` fetches up to 5 events (highest absolute `expected_impact_pct`) that overlap the history + horizon window. Binary regressor columns (`event_<id8>`: `1.0` on event days, `0.0` otherwise) are injected into the Prophet DataFrame via `m.add_regressor()`.
+3. **Base vs Adjusted** — After Prophet prediction, `extra_regressors_additive` from the forecast is subtracted to yield `base_forecast`. Both are stored per-day.
+4. **Demand Sensing Log** — Each run writes to `demand_sensing_log` with `base_forecast`, `event_adjusted_forecast`, and the active events list as JSONB.
+5. **Fallback Safety** — If the history is below `MIN_DAYS_PROPHET` (35 days), the Ridge regression fallback is used and events are still recorded in the log (as active events metadata) but not applied as regressors.
+
+### Data Models
+
+| Table | Purpose |
+|---|---|
+| `business_events` | Event calendar per store |
+| `demand_sensing_log` | Per-day forecast snapshots with active events |
+| `event_impact_actuals` | Post-hoc measured impact of events on demand |
+
+### Regressor Cap
+
+To prevent Prophet from overfitting on sparse event data, a maximum of **5 regressors** are added per forecast run, chosen by highest absolute `|expected_impact_pct|`. Events with `NULL` impact are assigned a default behavioural `prior_scale=10.0`.
+
+### Migration
+
+Migration file: `migrations/versions/e7b8c9d0a1f2_events_tables.py`  
+Alembic chain: `chain_integration (64289450c79b)` → `pricing_tables (c3d91f2a7b44)` → **`events_tables (e7b8c9d0a1f2)`** (HEAD)
+
+---
+## Vision / OCR Invoice Processing Module
+
+The Vision module lets store owners photograph supplier invoices and have Tesseract OCR extract line items automatically. Extracted entries are fuzzy-matched against the product catalogue using PostgreSQL `pg_trgm`, then presented for human review before stock is atomically updated.
+
+### Architecture
+
+```
+Upload Image ──▶ POST /vision/ocr/upload
+                 │  saves file to uploads/ocr/{store_id}/
+                 │  creates OcrJob (status=QUEUED)
+                 └─▶ Celery task: process_ocr_job
+                      │ pytesseract → raw text
+                      │ parse_invoice_text() → structured items
+                      │ pg_trgm similarity match → products
+                      └─▶ OcrJobItems created, job → REVIEW
+
+Review ──────────▶ GET  /vision/ocr/{job_id}           (poll status + items)
+Confirm ─────────▶ POST /vision/ocr/{job_id}/confirm   (atomic stock update)
+Dismiss ─────────▶ POST /vision/ocr/{job_id}/dismiss   (mark as FAILED)
+```
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/vision/ocr/upload` | Upload invoice image (`.jpg/.png/.jpeg`, ≤10 MB). Returns `job_id`. |
+| `GET`  | `/api/v1/vision/ocr/{job_id}` | Poll job status and extracted items with match confidence. |
+| `POST` | `/api/v1/vision/ocr/{job_id}/confirm` | Confirm items → atomic stock increase + `StockAdjustment` log. |
+| `POST` | `/api/v1/vision/ocr/{job_id}/dismiss` | Dismiss/reject the OCR result. |
+
+### Data Model (migration `31f7ac7d8d9a`)
+
+| Table | Purpose |
+|-------|---------|
+| `ocr_jobs` | Tracks each upload: image path, status (`QUEUED→PROCESSING→REVIEW→APPLIED\|FAILED`), raw OCR text. |
+| `ocr_job_items` | Individual line items: raw text, matched `product_id`, confidence, quantity, unit price. |
+| `vision_category_tags` | Category tags extracted from the invoice with confidence scores. |
+
+### Parser (`app/vision/parser.py`)
+
+Regex-based text parser handles: quantities with units (`pcs`, `kg`, `litre`, `pack`, `box`, `carton`, `dozen`), prices with `₹`/`Rs`/`Rs.` prefixes, comma-separated numbers, and multi-line product names.
+
+### Testing (10 tests in `tests/test_vision.py`)
+
+- **Parser**: basic extraction, comma prices, case-insensitive units, multi-line accumulation
+- **Upload API**: valid image → 201, oversized → 413, wrong MIME → 415
+- **OCR task**: simulated task creates items and transitions job to REVIEW
+- **Confirm**: atomic stock update verified; partial failure rolls back all changes
+
+### Security
+
+All endpoints require JWT auth (`@require_auth`). Job ownership is enforced via `store_id` comparison. OCR uploads are rate-limited to 20/hour per store.
+
+---
+
+## Security & Performance Hardening
+
+The hardening pass adds cross-cutting security and performance controls without new features.
+
+### Rate Limiting
+
+| Endpoint | Limit | Key |
+|----------|-------|-----|
+| `POST /auth/register` | 5/hour | IP |
+| `POST /auth/login` | 10/minute | IP |
+| `POST /vision/ocr/upload` | 20/hour | `store_id` (from JWT) |
+| All other endpoints | 300/minute | IP (global default) |
+
+Powered by `flask-limiter` with Redis storage. Rate limiting is disabled in tests (`RATELIMIT_ENABLED=False`) except for the dedicated `test_login_rate_limit` test which uses a separate app fixture.
+
+### FK Index Audit (migration `f4a5b6c7d8e9`)
+
+35 indexes added to FK columns across all post-launch tables: `supplier_products`, `purchase_order_items`, `gst_transactions`, `loyalty_transactions`, `credit_transactions`, `ocr_job_items`, `ocr_jobs`, `vision_category_tags`, `whatsapp_templates`, `whatsapp_message_log`, `store_group_memberships`, `chain_daily_aggregates`, `inter_store_transfer_suggestions`, `business_events`, `demand_sensing_log`, `event_impact_actuals`, `stock_adjustments`, `stock_audit_items`, `product_price_history`, and more.
+
+### Input Sanitization
+
+- **OCR text truncation**: `parse_invoice_text()` truncates input to 50,000 characters to prevent DoS from huge payloads.
+- **Free-text fields**: `app/utils/sanitize.py` provides `sanitize_string(value, max_length)` which strips leading/trailing whitespace and truncates. Applied on supplier create/update (name 128, address 512) and PO notes.
+
+### Log Redaction (`SensitiveDataFilter`)
+
+A `logging.Filter` attached to the Flask app logger and the root logger redacts values matching `token`, `password`, `access_token`, or `secret` patterns with `***REDACTED***`. This prevents API keys and passwords from appearing in log files.
+
+### Slow Request Detection
+
+In development mode (`FLASK_ENV=development` and not `TESTING`):
+- `SQLALCHEMY_ECHO=True` logs all SQL queries.
+- An `@app.after_request` hook logs `[SLOW REQUEST] {method} {path} took {time}ms` for any response taking >500ms.
+
+---
+
+## AWS Deployment & CI/CD
+
+RetailIQ is fully documented for production deployment on **AWS ECS Fargate**.
+
+The repository includes:
+- Multi-stage `Dockerfile.prod`
+- ECS Task Definitions (`aws/task-definitions/`)
+- IAM roles and CloudWatch alarms (`aws/iam/`, `aws/cloudwatch/`)
+- Full GitHub Actions CI/CD pipeline (`.github/workflows/deploy.yml`)
+
+For the comprehensive step-by-step guide, including architecture diagrams, cost optimization, security hardening, and troubleshooting, see the [**AWS Deployment Guide (DEPLOYMENT.md)**](./DEPLOYMENT.md).
+>>>>>>> bad8c750044d900333d20dd8e7d6ba1d491fa3ed
 
 ---
 
