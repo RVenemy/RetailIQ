@@ -546,7 +546,7 @@ def upgrade() -> None:
             ),
             sa.Column(
                 "description",
-                sa.String(length=None),
+                sa.Text(),
             ),
             sa.UniqueConstraint("key", name=None),
         )
@@ -557,7 +557,7 @@ def upgrade() -> None:
             sa.Column("id", sa.Integer(), primary_key=True, nullable=False, autoincrement=True),
             sa.Column("key_id", sa.Integer(), sa.ForeignKey("translation_keys.id"), nullable=False),
             sa.Column("locale", sa.String(length=10), nullable=False),
-            sa.Column("value", sa.String(length=None), nullable=False),
+            sa.Column("value", sa.Text(), nullable=False),
             sa.Column("is_approved", sa.Boolean(), nullable=False),
             sa.Column(
                 "updated_at",
@@ -588,7 +588,7 @@ def upgrade() -> None:
             sa.Column("category", sa.String(length=12), nullable=False),
             sa.Column(
                 "description",
-                sa.String(length=None),
+                sa.Text(),
             ),
             sa.Column("premium_monthly", sa.Numeric(precision=12, scale=2), nullable=False),
             sa.Column("max_coverage", sa.Numeric(precision=14, scale=2), nullable=False),
@@ -691,7 +691,7 @@ def upgrade() -> None:
             ),
             sa.Column(
                 "compliance_notes",
-                sa.String(length=None),
+                sa.Text(),
             ),
             sa.Column("is_active", sa.Boolean(), nullable=False),
             sa.UniqueConstraint("country_code", "tax_type", name="uq_country_tax_type"),
@@ -827,7 +827,7 @@ def upgrade() -> None:
             ),
             sa.Column(
                 "notes",
-                sa.String(length=None),
+                sa.Text(),
             ),
             sa.Column("updated_at", sa.TIMESTAMP(), nullable=False),
             sa.UniqueConstraint("store_id", name=None),
@@ -1000,7 +1000,7 @@ def upgrade() -> None:
             ),
             sa.Column(
                 "error_message",
-                sa.String(length=None),
+                sa.Text(),
             ),
             sa.Column(
                 "metadata_json",
@@ -1060,7 +1060,7 @@ def upgrade() -> None:
             ),
             sa.Column(
                 "rejection_reason",
-                sa.String(length=None),
+                sa.Text(),
             ),
             sa.Column(
                 "verified_at",
@@ -1096,15 +1096,15 @@ def upgrade() -> None:
             ),
             sa.Column(
                 "xml_payload",
-                sa.String(length=None),
+                sa.Text(),
             ),
             sa.Column(
                 "qr_code_data",
-                sa.String(length=None),
+                sa.Text(),
             ),
             sa.Column(
                 "digital_signature",
-                sa.String(length=None),
+                sa.Text(),
             ),
             sa.Column("status", sa.String(length=16), nullable=False),
             sa.Column(
@@ -1189,7 +1189,7 @@ def upgrade() -> None:
             sa.Column("name", sa.String(length=256), nullable=False),
             sa.Column(
                 "description",
-                sa.String(length=None),
+                sa.Text(),
             ),
             sa.Column(
                 "category",
@@ -1359,7 +1359,7 @@ def upgrade() -> None:
             sa.Column("rating", sa.Integer(), nullable=False),
             sa.Column(
                 "review_text",
-                sa.String(length=None),
+                sa.Text(),
             ),
             sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
             sa.UniqueConstraint("merchant_id", "order_id", name="uq_merchant_order_review"),
@@ -1384,7 +1384,7 @@ def upgrade() -> None:
             ),
             sa.Column(
                 "user_agent",
-                sa.String(length=None),
+                sa.Text(),
             ),
             sa.Column("result", sa.String(length=16), nullable=False),
             sa.Column(

@@ -131,10 +131,27 @@ def run_migrations_online() -> None:
 
             Operations.invoke = patched_invoke
 
-        def include_object(object, name, type_, reflected, compare_to):
+        def include_object_sqlite(object, name, type_, reflected, compare_to):
             if type_ == "index":
                 return False
             return True
+
+        # Expression-based indexes that Alembic cannot reliably diff
+        _EXPRESSION_INDEXES = {
+            "idx_daily_sku_summary_store_product_date",
+            "idx_daily_store_summary_store_date",
+            "idx_transactions_store_created",
+        }
+
+        def include_object_pg(object, name, type_, reflected, compare_to):
+            if type_ == "index" and name in _EXPRESSION_INDEXES:
+                return False
+            return True
+
+        if connection.dialect.name == "sqlite":
+            obj_filter = include_object_sqlite
+        else:
+            obj_filter = include_object_pg
 
         context.configure(
             connection=connection,
@@ -142,7 +159,7 @@ def run_migrations_online() -> None:
             render_as_batch=True if connection.dialect.name == "sqlite" else False,
             compare_type=False if connection.dialect.name == "sqlite" else True,
             compare_server_default=False if connection.dialect.name == "sqlite" else True,
-            include_object=include_object if connection.dialect.name == "sqlite" else None,
+            include_object=obj_filter,
         )
 
         with context.begin_transaction():
