@@ -192,11 +192,18 @@ graph TD
         RULE[Decision Engine]
         FORE[Forecasting Prophet/XGBoost]
         TASK[Celery Workers]
+        ERR[Centralized Error Handling]
     end
 
     subgraph "Storage Layer"
         CDB[(CockroachDB Global)]
         RED[(Redis Multi-Region Cache)]
+    end
+
+    subgraph "CI/CD & Hardening"
+        RUFF[Ruff Linter]
+        ALEM[Alembic Migration Sync]
+        SCAN[Security Scan - Bandit/pip-audit]
     end
 
     INT --> |Real-time| AUTH
@@ -208,15 +215,8 @@ graph TD
     TASK --> FORE
     FORE --> |Cache| RED
     DEV --> |Usage| CDB
-
-    subgraph "Modular Audit Framework (New)"
-        ROLE1[Security Tester]
-        ROLE2[Performance Eng]
-        ROLE3[Backend Architect]
-        ROLE4[QA Architect]
-        ROLE5[Reliability SRE]
-        ROLE1 & ROLE2 & ROLE3 & ROLE4 & ROLE5 -.-> |Brutal Audit| AUTH & INV & SALE & AI & TASK
-    end
+    ERR -.-> |Standardized JSON| API_LAYER
+    CI_CD --> |Blocking Checks| DEV_WORKFLOW
 ```
 
 ### AI/ML Inference Architecture
@@ -787,17 +787,25 @@ Multi-step user journey tests that span multiple endpoints and simulate Celery t
 
 ## CI/CD
 
-### CI/CD Pipeline (`.github/workflows/ci.yml`)
-
-Runs on every push and PR. Six parallel jobs:
-
-| Job | Purpose | Blocking? |
-|-----|---------|-----------|
-| 🔍 **Lint** | Ruff linter + format check | ✅ Yes |
-| 🛡️ **Security** | Bandit SAST scan + `pip-audit` CVE check | ✅ Yes |
-| 🧪 **Test** | Full pytest suite with coverage (Distroless focus) | ✅ Yes |
-| 🐳 **Docker** | Multi-stage Distroless build validation | ✅ Yes |
 | 📦 **Migration Check** | Alembic migration detection | ✅ Yes |
+
+---
+
+## 25. Comprehensive Developer and Engineer Guide
+
+### Coding Standards
+- **Linter**: We use `ruff` for extremely fast linting and formatting. Always run `ruff --fix .` before committing.
+- **Type Hints**: All new code MUST include Python type hints for clarity and static analysis.
+- **Error Handling**: Use the `HTTPException` handler in `app/__init__.py`. Return `429` for rate limits, `422` for validation errors, and `500` only for truly unhandled exceptions.
+
+### Data Modeling & Migrations
+- **Models**: Core models live in `app/models/__init__.py`. External or secondary models should be integrated via `missing_models.py` or separate files but MUST be imported in the main models init to be detected by Alembic.
+- **Migrations**: Always verify that `flask db migrate` produces a clean script. If adding tables for new features (e.g., Market Intelligence), ensure they are correctly linked to the `Base` metadata.
+
+### Security Best Practices
+- **Dependency Audit**: We run `pip-audit` and `safety` in CI. Never downgrade a pinned security version (e.g., `flask-cors>=6.0.2`).
+- **Input Sanitization**: Use `bleach` for HTML sanitization and internal regex-based stripping for sensitive fields.
+- **Log Masking**: Sensitive fields like `access_token` or `password` are automatically redacted by the `SensitiveDataFilter` in `app/__init__.py`.
 
 **Security Hardening (Mar 2026 Audit)**:
 - All core dependencies are pinned to secure versions (resolving CVEs in `flask-cors`, `scikit-learn`, `marshmallow`, `weasyprint`).

@@ -420,6 +420,8 @@ def create_app(config=None):
 
     from app.utils.responses import APIError, standard_json
 
+    from werkzeug.exceptions import HTTPException
+
     @app.errorhandler(APIError)
     def handle_api_error(err):
         return standard_json(
@@ -429,6 +431,11 @@ def create_app(config=None):
     @app.errorhandler(ValidationError)
     def handle_validation_error(err):
         return standard_json(success=False, message="Validation error", status_code=422, error=err.messages)
+
+    @app.errorhandler(HTTPException)
+    def handle_http_exception(err):
+        """Pass through standard HTTP errors (like 429 Rate Limit)."""
+        return standard_json(success=False, message=err.description, status_code=err.code, error={"code": err.name})
 
     @app.errorhandler(Exception)
     def handle_global_error(err):
