@@ -4,15 +4,15 @@ try:
     job_id = "66463241600"
     log_req = urllib.request.Request(
         f"https://api.github.com/repos/avianthonf/RetailIQ/actions/jobs/{job_id}/logs",
-        headers={"Accept": "application/vnd.github.v3+json"}
+        headers={"Accept": "application/vnd.github.v3+json"},
     )
 
     with urllib.request.urlopen(log_req) as log_response:
-        logs = log_response.read().decode('utf-8')
+        logs = log_response.read().decode("utf-8")
 
         in_alembic = False
         captured = []
-        for line in logs.split('\n'):
+        for line in logs.split("\n"):
             if " almebic check" in line.lower() or "OUTPUT=$(alembic check" in line:
                 in_alembic = True
             if in_alembic:
