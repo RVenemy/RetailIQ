@@ -17,7 +17,6 @@ from .services import (
     get_top_customers,
 )
 
-
 # ──────────────────────────────────────────────────────────────
 # Helpers
 # ──────────────────────────────────────────────────────────────
@@ -277,4 +276,3 @@ def customer_summary(customer_id):
 
     data = get_customer_summary_data(store_id, customer_id)
     return standard_json(data=data)
-

@@ -120,6 +120,8 @@ def test_update_tax_config(client, owner_headers, test_category, app):
         c2 = db.session.get(Category, cat2_id)
         assert cat1.gst_rate == 18.0
         assert c2.gst_rate == 5.0
+
+
 def test_update_store_profile_validation(client, owner_headers):
     # Test invalid store type
     payload = {"store_name": "Invalid Store", "store_type": "invalid_type"}

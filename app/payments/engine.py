@@ -16,6 +16,7 @@ def register_payment_adapter(code: str):
     def decorator(cls):
         _payment_adapters[code] = cls
         return cls
+
     return decorator
 
 
@@ -43,7 +44,7 @@ class RazorpayAdapter(BasePaymentAdapter):
             "order_id": f"order_{txn_id}",
             "amount": amount * 100,  # Razorpay expects paise
             "currency": currency,
-            "key_id": "rzp_test_12345"
+            "key_id": "rzp_test_12345",
         }
 
     def verify_payment(self, provider_ref: str, **kwargs) -> bool:
@@ -77,7 +78,7 @@ class PixAdapter(BasePaymentAdapter):
             "qr_code_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==",
             "qr_code_string": f"00020126580014br.gov.bcb.pix0136{txn_id}",
             "amount": amount,
-            "currency": "BRL"
+            "currency": "BRL",
         }
 
     def verify_payment(self, provider_ref: str, **kwargs) -> bool:
@@ -92,11 +93,7 @@ class MPesaAdapter(BasePaymentAdapter):
         phone = kwargs.get("phone_number")
         if not phone:
             raise ValueError("Phone number required for M-Pesa STK push")
-        return {
-            "provider": "mpesa",
-            "checkout_request_id": f"ws_{txn_id}",
-            "message": f"STK Push sent to {phone}"
-        }
+        return {"provider": "mpesa", "checkout_request_id": f"ws_{txn_id}", "message": f"STK Push sent to {phone}"}
 
     def verify_payment(self, provider_ref: str, **kwargs) -> bool:
         return True

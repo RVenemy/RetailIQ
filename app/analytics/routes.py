@@ -144,7 +144,7 @@ def top_products():
         return format_response(
             success=False,
             error={"code": "INVALID_PARAM", "message": "metric must be revenue|quantity|profit"},
-            status_code=422
+            status_code=422,
         )
 
     col_map = {"revenue": "revenue", "quantity": "units_sold", "profit": "profit"}

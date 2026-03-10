@@ -18,9 +18,7 @@ from .engine import get_kyc_adapter, hash_id_number
 @require_auth
 def list_kyc_providers():
     country_code = request.args.get("country_code", "IN")
-    providers = db.session.query(KYCProvider).filter_by(
-        country_code=country_code, is_active=True
-    ).all()
+    providers = db.session.query(KYCProvider).filter_by(country_code=country_code, is_active=True).all()
 
     data = [
         {
@@ -29,7 +27,7 @@ def list_kyc_providers():
             "type": p.verification_type,
             "id_label": p.id_label,
             "required_fields": p.required_fields,
-            "is_mandatory": p.is_mandatory
+            "is_mandatory": p.is_mandatory,
         }
         for p in providers
     ]
@@ -67,7 +65,7 @@ def verify_kyc():
             id_number_hash=hash_id_number(id_number),
             verification_status=result.get("status", "PENDING"),
             verification_data=result,
-            verified_at=datetime.now(timezone.utc) if result.get("status") == "VERIFIED" else None
+            verified_at=datetime.now(timezone.utc) if result.get("status") == "VERIFIED" else None,
         )
         db.session.add(record)
         db.session.commit()
@@ -86,16 +84,19 @@ def verify_kyc():
 def kyc_status():
     store_id = g.current_user["store_id"]
 
-    records = db.session.query(KYCRecord, KYCProvider.name).join(
-        KYCProvider, KYCProvider.id == KYCRecord.provider_id
-    ).filter(KYCRecord.store_id == store_id).all()
+    records = (
+        db.session.query(KYCRecord, KYCProvider.name)
+        .join(KYCProvider, KYCProvider.id == KYCRecord.provider_id)
+        .filter(KYCRecord.store_id == store_id)
+        .all()
+    )
 
     data = [
         {
             "provider_name": provider_name,
             "status": record.verification_status,
             "country_code": record.country_code,
-            "verified_at": record.verified_at.isoformat() if record.verified_at else None
+            "verified_at": record.verified_at.isoformat() if record.verified_at else None,
         }
         for record, provider_name in records
     ]

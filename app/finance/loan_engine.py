@@ -13,15 +13,11 @@ from .ledger import record_transaction
 
 class LoanError(Exception):
     """Base exception for loan operations."""
+
     pass
 
 
-def apply_for_loan(
-    store_id: int,
-    product_id: int,
-    amount: Decimal,
-    term_days: int
-) -> LoanApplication:
+def apply_for_loan(store_id: int, product_id: int, amount: Decimal, term_days: int) -> LoanApplication:
     """Submit a new loan application."""
     product = db.session.get(LoanProduct, product_id)
     if not product or not product.is_active:
@@ -39,7 +35,7 @@ def apply_for_loan(
         requested_amount=amount,
         status="APPLIED",
         term_days=term_days,
-        applied_at=datetime.now(timezone.utc)
+        applied_at=datetime.now(timezone.utc),
     )
     db.session.add(application)
     db.session.flush()
@@ -86,7 +82,7 @@ def disburse_loan(application_id: int) -> uuid.UUID:
         credit_account_type="ESCROW",  # Liability: the merchant now owes this money
         amount=app.approved_amount,
         description=f"Disbursement for Loan #{app.id}",
-        meta_data={"loan_id": app.id}
+        meta_data={"loan_id": app.id},
     )
 
     db.session.flush()
@@ -115,10 +111,10 @@ def record_repayment(loan_id: int, amount: Decimal) -> uuid.UUID:
     txn_id = record_transaction(
         store_id=app.store_id,
         debit_account_type="ESCROW",  # Decreasing liability
-        credit_account_type="OPERATING", # Decreasing cash/operating
+        credit_account_type="OPERATING",  # Decreasing cash/operating
         amount=amount,
         description=f"Repayment for Loan #{app.id}",
-        meta_data={"loan_id": app.id}
+        meta_data={"loan_id": app.id},
     )
 
     # 2. Update loan record
@@ -136,7 +132,7 @@ def record_repayment(loan_id: int, amount: Decimal) -> uuid.UUID:
         amount=amount,
         principal_component=principal_component,
         interest_component=interest_component,
-        repaid_at=datetime.now(timezone.utc)
+        repaid_at=datetime.now(timezone.utc),
     )
     db.session.add(repayment)
 

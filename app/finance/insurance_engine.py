@@ -12,13 +12,11 @@ from .ledger import record_transaction
 
 class InsuranceError(Exception):
     """Base exception for insurance operations."""
+
     pass
 
 
-def enroll_merchant(
-    store_id: int,
-    product_id: int
-) -> InsurancePolicy:
+def enroll_merchant(store_id: int, product_id: int) -> InsurancePolicy:
     """Enroll a merchant in an insurance product."""
     product = db.session.get(InsuranceProduct, product_id)
     if not product or not product.is_active:
@@ -28,10 +26,10 @@ def enroll_merchant(
     record_transaction(
         store_id=store_id,
         debit_account_type="REVENUE",  # Expense for merchant
-        credit_account_type="OPERATING", # Paying from operating
+        credit_account_type="OPERATING",  # Paying from operating
         amount=product.premium_monthly,
         description=f"Insurance premium for {product.name}",
-        meta_data={"product_id": product.id}
+        meta_data={"product_id": product.id},
     )
 
     # 2. Create policy
@@ -40,7 +38,7 @@ def enroll_merchant(
         product_id=product_id,
         status="ACTIVE",
         enrolled_at=datetime.now(timezone.utc),
-        expires_at=datetime.now(timezone.utc) + timedelta(days=30)
+        expires_at=datetime.now(timezone.utc) + timedelta(days=30),
     )
     db.session.add(policy)
     db.session.flush()
@@ -48,11 +46,7 @@ def enroll_merchant(
     return policy
 
 
-def trigger_parametric_claim(
-    policy_id: int,
-    trigger_type: str,
-    payout_amount: Decimal
-) -> InsuranceClaim:
+def trigger_parametric_claim(policy_id: int, trigger_type: str, payout_amount: Decimal) -> InsuranceClaim:
     """
     Trigger a claim based on external parameters (e.g. weather data).
     Parametric insurance pays out automatically when thresholds are met.
@@ -67,7 +61,7 @@ def trigger_parametric_claim(
         trigger_type=trigger_type,
         payout_amount=payout_amount,
         status="APPROVED",
-        created_at=datetime.now(timezone.utc)
+        created_at=datetime.now(timezone.utc),
     )
     db.session.add(claim)
     db.session.flush()
@@ -76,9 +70,9 @@ def trigger_parametric_claim(
     record_transaction(
         store_id=policy.store_id,
         debit_account_type="OPERATING",
-        credit_account_type="REVENUE", # System payout
+        credit_account_type="REVENUE",  # System payout
         amount=payout_amount,
-        description=f"Insurance claim payout for policy #{policy.id} (Trigger: {trigger_type})"
+        description=f"Insurance claim payout for policy #{policy.id} (Trigger: {trigger_type})",
     )
 
     claim.status = "PAID"

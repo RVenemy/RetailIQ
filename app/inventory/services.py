@@ -1,8 +1,11 @@
 from datetime import date as date_type
 from datetime import datetime, timedelta, timezone
+
 from sqlalchemy import func, select
+
 from app import db
-from app.models import Product, ProductPriceHistory, Alert, DailySkuSummary
+from app.models import Alert, DailySkuSummary, Product, ProductPriceHistory
+
 
 class ProductService:
     @staticmethod

@@ -16,6 +16,7 @@ def register_kyc_adapter(code: str):
     def decorator(cls):
         _kyc_adapters[code] = cls
         return cls
+
     return decorator
 
 
@@ -37,11 +38,7 @@ class AadhaarAdapter(BaseKYCAdapter):
         if len(id_number) != 12 or not id_number.isdigit():
             raise ValueError("Invalid Aadhaar format; must be 12 digits.")
 
-        return {
-            "status": "VERIFIED",
-            "name_match_score": 0.95,
-            "address_verified": True
-        }
+        return {"status": "VERIFIED", "name_match_score": 0.95, "address_verified": True}
 
 
 @register_kyc_adapter("ssn_ein")
@@ -50,11 +47,7 @@ class USEinAdapter(BaseKYCAdapter):
 
     def verify_identity(self, user_id: int, id_number: str, **kwargs) -> dict[str, Any]:
         # Mock TIN check
-        return {
-            "status": "VERIFIED",
-            "tin_type": "EIN",
-            "match_status": "EXACT_MATCH"
-        }
+        return {"status": "VERIFIED", "tin_type": "EIN", "match_status": "EXACT_MATCH"}
 
 
 @register_kyc_adapter("bvn")
@@ -64,11 +57,7 @@ class BVNAdapter(BaseKYCAdapter):
     def verify_identity(self, user_id: int, id_number: str, **kwargs) -> dict[str, Any]:
         if len(id_number) != 11:
             raise ValueError("BVN must be 11 digits.")
-        return {
-            "status": "VERIFIED",
-            "bvn": "***********",
-            "kyc_tier": "Tier3"
-        }
+        return {"status": "VERIFIED", "bvn": "***********", "kyc_tier": "Tier3"}
 
 
 @register_kyc_adapter("cnpj")
@@ -76,11 +65,7 @@ class CNPJAdapter(BaseKYCAdapter):
     """Brazil - CNPJ via Receita Federal."""
 
     def verify_identity(self, user_id: int, id_number: str, **kwargs) -> dict[str, Any]:
-        return {
-            "status": "VERIFIED",
-            "company_status": "ACTIVE",
-            "tax_regime": "Simples Nacional"
-        }
+        return {"status": "VERIFIED", "company_status": "ACTIVE", "tax_regime": "Simples Nacional"}
 
 
 def get_kyc_adapter(provider_code: str, store_id: int) -> BaseKYCAdapter:

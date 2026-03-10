@@ -12,18 +12,13 @@ from .ledger import record_transaction
 
 class TreasuryError(Exception):
     """Base exception for treasury operations."""
+
     pass
 
 
-def set_sweep_config(
-    store_id: int,
-    strategy: str,
-    min_balance: Decimal
-) -> TreasuryConfig:
+def set_sweep_config(store_id: int, strategy: str, min_balance: Decimal) -> TreasuryConfig:
     """Configure treasury sweep strategy for a merchant."""
-    config = db.session.execute(
-        select(TreasuryConfig).filter_by(store_id=store_id)
-    ).scalar_one_or_none()
+    config = db.session.execute(select(TreasuryConfig).filter_by(store_id=store_id)).scalar_one_or_none()
 
     if not config:
         config = TreasuryConfig(store_id=store_id)
@@ -31,7 +26,7 @@ def set_sweep_config(
 
     config.sweep_strategy = strategy
     config.min_balance_threshold = min_balance
-    config.is_active = (strategy != "OFF")
+    config.is_active = strategy != "OFF"
 
     db.session.flush()
     return config
@@ -64,18 +59,15 @@ def perform_sweep(store_id: int) -> Decimal | None:
     record_transaction(
         store_id=store_id,
         debit_account_type="RESERVE",  # Moving to Reserve/Treasury
-        credit_account_type="OPERATING", # Moving from Operating
+        credit_account_type="OPERATING",  # Moving from Operating
         amount=sweep_amount,
         description=f"Automated treasury sweep ({config.sweep_strategy} strategy)",
-        meta_data={"strategy": config.sweep_strategy}
+        meta_data={"strategy": config.sweep_strategy},
     )
 
     # 4. Record treasury transaction
     tx = TreasuryTransaction(
-        store_id=store_id,
-        type="SWEEP_IN",
-        amount=sweep_amount,
-        created_at=datetime.now(timezone.utc)
+        store_id=store_id, type="SWEEP_IN", amount=sweep_amount, created_at=datetime.now(timezone.utc)
     )
     db.session.add(tx)
 
@@ -107,9 +99,9 @@ def accrue_yield(store_id: int) -> Decimal:
     record_transaction(
         store_id=store_id,
         debit_account_type="RESERVE",
-        credit_account_type="REVENUE", # System expense, merchant revenue
+        credit_account_type="REVENUE",  # System expense, merchant revenue
         amount=yield_amount,
-        description="Daily treasury yield accrual"
+        description="Daily treasury yield accrual",
     )
 
     # Log treasury action
@@ -118,7 +110,7 @@ def accrue_yield(store_id: int) -> Decimal:
         type="YIELD_ACCRUAL",
         amount=yield_amount,
         current_yield_bps=annual_yield_bps,
-        created_at=datetime.now(timezone.utc)
+        created_at=datetime.now(timezone.utc),
     )
     db.session.add(tx)
 

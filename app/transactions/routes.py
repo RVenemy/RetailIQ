@@ -117,6 +117,7 @@ def get_transactions():
     if role == "staff":
         # Enforce today only
         from datetime import datetime, timezone
+
         today_date = datetime.now(timezone.utc).date()
         query = query.filter(func.date(Transaction.created_at) == today_date)
     else:
@@ -240,8 +241,9 @@ def get_daily_summary():
     try:
         target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
     except ValueError:
-        return standard_json(success=False, message="Date must be YYYY-MM-DD", status_code=422, error={"code": "INVALID_DATE"})
+        return standard_json(
+            success=False, message="Date must be YYYY-MM-DD", status_code=422, error={"code": "INVALID_DATE"}
+        )
 
     summary = get_daily_summary_data(store_id, target_date)
     return standard_json(data=summary)
-

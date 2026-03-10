@@ -53,6 +53,8 @@ class StockAuditItemSchema(Schema):
 class StockAuditSchema(Schema):
     items = fields.List(fields.Nested(StockAuditItemSchema), required=True, validate=validate.Length(min=1))
     notes = fields.Str(load_default=None)
+
+
 class ProductSchema(Schema):
     product_id = fields.Int(dump_only=True)
     store_id = fields.Int(dump_only=True)

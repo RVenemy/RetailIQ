@@ -6,26 +6,27 @@ from flask import g, request
 from marshmallow import ValidationError
 from sqlalchemy import exists, func, select
 
+from app.utils.responses import standard_json
+
 from .. import db
 from ..auth.decorators import require_auth, require_role
 from ..models import (
     Alert,
     Product,
+    ProductPriceHistory,
     StockAdjustment,
     StockAudit,
     StockAuditItem,
-    ProductPriceHistory,
 )
 from . import inventory_bp
 from .schemas import (
     ProductCreateSchema,
+    ProductSchema,
     ProductUpdateSchema,
     StockAuditSchema,
     StockUpdateSchema,
-    ProductSchema,
 )
 from .services import ProductService
-from app.utils.responses import standard_json
 
 # ──────────────────────────────────────────────────────────────
 # Products – Collection
@@ -66,9 +67,9 @@ def list_products():
         total = len(products)
 
     from .schemas import ProductSchema
+
     return standard_json(
-        data=ProductSchema(many=True).dump(products), 
-        meta={"page": page, "page_size": page_size, "total": total}
+        data=ProductSchema(many=True).dump(products), meta={"page": page, "page_size": page_size, "total": total}
     )
 
 
@@ -90,6 +91,7 @@ def create_product():
         sku = ProductService.generate_next_sku(store_id)
 
     from ..models import Product
+
     product = Product(
         store_id=store_id,
         category_id=data.get("category_id"),
@@ -115,6 +117,7 @@ def create_product():
     db.session.commit()
 
     from .schemas import ProductSchema
+
     return standard_json(data=ProductSchema().dump(product), status_code=201)
 
 
@@ -128,10 +131,12 @@ def create_product():
 def get_product(product_id):
     store_id = g.current_user["store_id"]
     from ..models import Product
+
     product = db.session.query(Product).filter_by(product_id=product_id, store_id=store_id).first()
     if not product:
         return standard_json(success=False, message="Product not found", status_code=404)
     from .schemas import ProductSchema
+
     return standard_json(data=ProductSchema().dump(product))
 
 
@@ -198,6 +203,7 @@ def update_product(product_id):
 
     db.session.commit()
     from .schemas import ProductSchema
+
     return standard_json(data=ProductSchema().dump(product))
 
 
@@ -207,6 +213,7 @@ def update_product(product_id):
 def delete_product(product_id):
     store_id = g.current_user["store_id"]
     from ..models import Product
+
     product = db.session.query(Product).filter_by(product_id=product_id, store_id=store_id).first()
     if not product:
         return standard_json(success=False, message="Product not found", status_code=404)
@@ -279,6 +286,7 @@ def stock_update(product_id):
 
     db.session.commit()
     from .schemas import ProductSchema
+
     return standard_json(data=ProductSchema().dump(product))
 
 
@@ -351,7 +359,7 @@ def stock_audit():
             "audit_date": audit.audit_date.isoformat(),
             "items": result_items,
         },
-        status_code=201
+        status_code=201,
     )
 
 
@@ -366,6 +374,7 @@ def price_history(product_id):
     store_id = g.current_user["store_id"]
 
     from ..models import Product
+
     # Verify product belongs to store
     product = db.session.query(Product).filter_by(product_id=product_id, store_id=store_id).first()
     if not product:
@@ -433,6 +442,7 @@ def dismiss_alert(alert_id):
 
     store_id = g.current_user["store_id"]
     from ..models import Alert
+
     alert = db.session.query(Alert).filter(Alert.alert_id == alert_id, Alert.store_id == store_id).first()
     if not alert:
         return standard_json(success=False, message="Alert not found", status_code=404)

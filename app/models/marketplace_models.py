@@ -73,9 +73,7 @@ class CatalogItem(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, default=lambda: datetime.now(timezone.utc))
 
-    __table_args__ = (
-        Index("idx_catalog_items_supplier_active", "supplier_profile_id", "is_active"),
-    )
+    __table_args__ = (Index("idx_catalog_items_supplier_active", "supplier_profile_id", "is_active"),)
 
 
 class MarketplacePurchaseOrder(Base):
@@ -145,7 +143,9 @@ class RFQ(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     merchant_id: Mapped[int] = mapped_column(Integer, ForeignKey("stores.store_id"), nullable=False)
-    items: Mapped[dict] = mapped_column(JSONB, nullable=False)  # [{"category": "Electronics", "description": "...", "quantity": 100}]
+    items: Mapped[dict] = mapped_column(
+        JSONB, nullable=False
+    )  # [{"category": "Electronics", "description": "...", "quantity": 100}]
     status: Mapped[str] = mapped_column(
         SQLEnum("OPEN", "CLOSED", "CANCELLED", "FULFILLED", name="rfq_status_enum"), default="OPEN"
     )
@@ -161,7 +161,9 @@ class RFQResponse(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     rfq_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("marketplace_rfqs.id"), nullable=False)
     supplier_profile_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("supplier_profiles.id"), nullable=False)
-    quoted_items: Mapped[dict] = mapped_column(JSONB, nullable=False)  # [{"rfq_item_id": 1, "unit_price": 10.50, "catalog_item_id": Optional}]
+    quoted_items: Mapped[dict] = mapped_column(
+        JSONB, nullable=False
+    )  # [{"rfq_item_id": 1, "unit_price": 10.50, "catalog_item_id": Optional}]
     total_price: Mapped[float] = mapped_column(Numeric(14, 2), nullable=False)
     delivery_days: Mapped[int | None] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(
@@ -169,9 +171,7 @@ class RFQResponse(Base):
     )
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, default=lambda: datetime.now(timezone.utc))
 
-    __table_args__ = (
-        UniqueConstraint("rfq_id", "supplier_profile_id", name="uq_rfq_supplier"),
-    )
+    __table_args__ = (UniqueConstraint("rfq_id", "supplier_profile_id", name="uq_rfq_supplier"),)
 
 
 class ProcurementRecommendation(Base):
@@ -182,7 +182,9 @@ class ProcurementRecommendation(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     merchant_id: Mapped[int] = mapped_column(Integer, ForeignKey("stores.store_id"), nullable=False)
     product_category: Mapped[str | None] = mapped_column(String(128))
-    recommended_items: Mapped[dict] = mapped_column(JSONB, nullable=False)  # [{"catalog_item_id": 1, "qty": 50, "reason": "Low stock"}]
+    recommended_items: Mapped[dict] = mapped_column(
+        JSONB, nullable=False
+    )  # [{"catalog_item_id": 1, "qty": 50, "reason": "Low stock"}]
     recommended_supplier_ids: Mapped[dict | None] = mapped_column(JSONB)  # ARRAY of BigInteger
     estimated_savings: Mapped[float | None] = mapped_column(Numeric(12, 2))
     urgency: Mapped[str] = mapped_column(
@@ -194,9 +196,7 @@ class ProcurementRecommendation(Base):
     acted_upon: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, default=lambda: datetime.now(timezone.utc))
 
-    __table_args__ = (
-        Index("idx_proc_rec_merchant_urgency", "merchant_id", "urgency"),
-    )
+    __table_args__ = (Index("idx_proc_rec_merchant_urgency", "merchant_id", "urgency"),)
 
 
 class SupplierReview(Base):

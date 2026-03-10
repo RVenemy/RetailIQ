@@ -342,6 +342,7 @@ def test_get_alerts(client, owner_headers, test_store, test_product):
 def test_unauthenticated_returns_401(client):
     resp = client.get("/api/v1/inventory/products")
 
+
 def test_stock_update_alias_increments_stock(client, owner_headers, test_product):
     original_stock = float(test_product.current_stock)
     payload = {

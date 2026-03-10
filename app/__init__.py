@@ -278,14 +278,14 @@ def create_app(config=None):
             elapsed_ms = (time.time() - start) * 1000
             if elapsed_ms > 500:
                 app.logger.warning("[SLOW REQUEST] %s %s took %.0fms", request.method, request.path, elapsed_ms)
-        
+
         # Add Security Headers
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         response.headers["Content-Security-Policy"] = "default-src 'self'"
         response.headers["X-XSS-Protection"] = "1; mode=block"
-        
+
         return response
 
     # Configure Celery (support both legacy upper-case and Celery native lower-case keys)
@@ -416,36 +416,25 @@ def create_app(config=None):
     def health_api():
         return _check_health()
 
-    from app.utils.responses import APIError, standard_json
     from marshmallow import ValidationError
+
+    from app.utils.responses import APIError, standard_json
 
     @app.errorhandler(APIError)
     def handle_api_error(err):
         return standard_json(
-            success=False,
-            message=err.message,
-            status_code=err.status_code,
-            error=err.errors,
-            meta=err.meta
+            success=False, message=err.message, status_code=err.status_code, error=err.errors, meta=err.meta
         )
 
     @app.errorhandler(ValidationError)
     def handle_validation_error(err):
-        return standard_json(
-            success=False,
-            message="Validation error",
-            status_code=422,
-            error=err.messages
-        )
+        return standard_json(success=False, message="Validation error", status_code=422, error=err.messages)
 
     @app.errorhandler(Exception)
     def handle_global_error(err):
         app.logger.exception("Unhandled exception: %s", err)
         return standard_json(
-            success=False,
-            message="Internal Server Error",
-            status_code=500,
-            error={"code": "SERVER_ERROR"}
+            success=False, message="Internal Server Error", status_code=500, error={"code": "SERVER_ERROR"}
         )
 
     return app

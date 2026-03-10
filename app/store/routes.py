@@ -2,12 +2,13 @@ from flask import Blueprint, g, request
 from marshmallow import ValidationError
 from sqlalchemy import select
 
+from app.utils.responses import standard_json
+
 from .. import db
 from ..auth.decorators import require_auth, require_role
 from ..models import Category, Product, Store
 from .schemas import CategorySchema, StoreProfileSchema, TaxConfigSchema
 from .services import StoreService
-from app.utils.responses import standard_json
 
 store_bp = Blueprint("store", __name__)
 

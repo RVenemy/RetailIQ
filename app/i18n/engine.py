@@ -25,22 +25,30 @@ translation_cache = TTLCache(maxsize=10000, ttl=3600)
 @cached(translation_cache)
 def get_translated_string(key: str, locale: str, fallback: str = "") -> str:
     """Fetch a translated string from the DB, falling back to English or the provided string."""
-    translation = db.session.query(Translation).filter(
-        Translation.key_id == db.text(f"(SELECT id FROM translation_keys WHERE key = '{key}')"),
-        Translation.locale == locale,
-        Translation.is_approved == True
-    ).first()
+    translation = (
+        db.session.query(Translation)
+        .filter(
+            Translation.key_id == db.text(f"(SELECT id FROM translation_keys WHERE key = '{key}')"),
+            Translation.locale == locale,
+            Translation.is_approved == True,
+        )
+        .first()
+    )
 
     if translation:
         return translation.value
 
     # Fallback to English
     if locale != "en":
-        en_translation = db.session.query(Translation).filter(
-            Translation.key_id == db.text(f"(SELECT id FROM translation_keys WHERE key = '{key}')"),
-            Translation.locale == "en",
-            Translation.is_approved == True
-        ).first()
+        en_translation = (
+            db.session.query(Translation)
+            .filter(
+                Translation.key_id == db.text(f"(SELECT id FROM translation_keys WHERE key = '{key}')"),
+                Translation.locale == "en",
+                Translation.is_approved == True,
+            )
+            .first()
+        )
         if en_translation:
             return en_translation.value
 

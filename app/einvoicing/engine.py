@@ -17,6 +17,7 @@ def register_einvoice_adapter(country_code: str):
     def decorator(cls):
         _einvoice_adapters[country_code] = cls
         return cls
+
     return decorator
 
 
@@ -43,14 +44,14 @@ class BrazilNFeAdapter(BaseEInvoiceAdapter):
         return {
             "format": "NF_E",
             "xml_payload": xml,
-            "chave_acesso": f"35210100000000000000550010000000011{str(transaction.transaction_id)[:5]}"
+            "chave_acesso": f"35210100000000000000550010000000011{str(transaction.transaction_id)[:5]}",
         }
 
     def submit_invoice(self, payload: dict[str, Any]) -> dict[str, Any]:
         return {
             "status": "ACCEPTED",
             "protocol": f"135210000{uuid.uuid4().hex[:8]}",
-            "qr_code_url": "http://nfe.fazenda.gov.br/portal/qrcode"
+            "qr_code_url": "http://nfe.fazenda.gov.br/portal/qrcode",
         }
 
 
@@ -60,17 +61,13 @@ class MexicoCFDIAdapter(BaseEInvoiceAdapter):
 
     def generate_invoice(self, transaction: Transaction) -> dict[str, Any]:
         xml = f"<cfdi:Comprobante Total='{transaction.total_amount}' Version='4.0'></cfdi:Comprobante>"
-        return {
-            "format": "CFDI",
-            "xml_payload": xml,
-            "uuid": str(uuid.uuid4())
-        }
+        return {"format": "CFDI", "xml_payload": xml, "uuid": str(uuid.uuid4())}
 
     def submit_invoice(self, payload: dict[str, Any]) -> dict[str, Any]:
         return {
             "status": "ACCEPTED",
             "sat_seal": "sello_digital_del_sat_...",
-            "qr_code_url": "https://verificacfdi.facturaelectronica.sat.gob.mx/"
+            "qr_code_url": "https://verificacfdi.facturaelectronica.sat.gob.mx/",
         }
 
 
@@ -79,16 +76,13 @@ class IndonesiaEFakturAdapter(BaseEInvoiceAdapter):
     """Indonesia - e-Faktur."""
 
     def generate_invoice(self, transaction: Transaction) -> dict[str, Any]:
-        return {
-            "format": "E_FAKTUR",
-            "xml_payload": f"<eFaktur><DPP>{transaction.total_amount}</DPP></eFaktur>"
-        }
+        return {"format": "E_FAKTUR", "xml_payload": f"<eFaktur><DPP>{transaction.total_amount}</DPP></eFaktur>"}
 
     def submit_invoice(self, payload: dict[str, Any]) -> dict[str, Any]:
         return {
             "status": "ACCEPTED",
             "faktur_pajak_no": f"010.000-21.{str(uuid.uuid4().int)[:8]}",
-            "qr_code_url": "https://efaktur.pajak.go.id/qr/"
+            "qr_code_url": "https://efaktur.pajak.go.id/qr/",
         }
 
 

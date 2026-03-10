@@ -11,14 +11,12 @@ from .ledger import record_transaction
 
 class PaymentError(Exception):
     """Base exception for payment operations."""
+
     pass
 
 
 def process_merchant_payment(
-    store_id: int,
-    amount: Decimal,
-    payment_method: str,
-    transaction_id: uuid.UUID | None = None
+    store_id: int, amount: Decimal, payment_method: str, transaction_id: uuid.UUID | None = None
 ) -> PaymentTransaction:
     """
     Process an incoming payment for a merchant.
@@ -46,8 +44,8 @@ def process_merchant_payment(
         meta_data={
             "gross_amount": str(amount),
             "fees": str(total_fees),
-            "source_txn": str(transaction_id) if transaction_id else None
-        }
+            "source_txn": str(transaction_id) if transaction_id else None,
+        },
     )
 
     # 3. Save payment record
@@ -59,7 +57,7 @@ def process_merchant_payment(
         fees=total_fees,
         status="SETTLED",
         payment_method=payment_method,
-        created_at=datetime.now(timezone.utc)
+        created_at=datetime.now(timezone.utc),
     )
     db.session.add(payment)
     db.session.flush()

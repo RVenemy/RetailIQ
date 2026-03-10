@@ -19,9 +19,7 @@ def get_tax_config():
     store_id = g.current_user["store_id"]
     country_code = request.args.get("country_code", "IN")
 
-    config = db.session.query(StoreTaxRegistration).filter_by(
-        store_id=store_id, country_code=country_code
-    ).first()
+    config = db.session.query(StoreTaxRegistration).filter_by(store_id=store_id, country_code=country_code).first()
 
     if not config:
         return format_response(
@@ -60,8 +58,8 @@ def calculate_tax():
             data={
                 "taxable_amount": float(result.taxable_amount),
                 "tax_amount": float(result.tax_amount),
-                "breakdown": {k: float(v) for k, v in result.breakdown.items()}
-            }
+                "breakdown": {k: float(v) for k, v in result.breakdown.items()},
+            },
         ), 200
     except Exception as e:
         return format_response(False, error={"code": "CALCULATION_ERROR", "message": str(e)}), 500

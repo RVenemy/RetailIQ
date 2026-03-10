@@ -24,9 +24,11 @@ class TaxCalculationResult:
 
 def register_tax_calculator(country_code: str):
     """Decorator to register a country-specific tax calculation strategy."""
+
     def decorator(cls):
         _tax_calculators[country_code] = cls
         return cls
+
     return decorator
 
 
@@ -40,14 +42,14 @@ class BaseTaxCalculator:
         self.config = self._get_config()
 
     def _get_registration(self):
-        return db.session.query(StoreTaxRegistration).filter_by(
-            store_id=self.store_id, country_code=self.country_code
-        ).first()
+        return (
+            db.session.query(StoreTaxRegistration)
+            .filter_by(store_id=self.store_id, country_code=self.country_code)
+            .first()
+        )
 
     def _get_config(self):
-        return db.session.query(CountryTaxConfig).filter_by(
-            country_code=self.country_code
-        ).first()
+        return db.session.query(CountryTaxConfig).filter_by(country_code=self.country_code).first()
 
     def calculate_tax(self, items: list[dict[str, Any]]) -> TaxCalculationResult:
         """
@@ -82,6 +84,7 @@ class IndiaGSTCalculator(BaseTaxCalculator):
             rate = Decimal(str(self.config.standard_rate))
             if product.hsn_code:
                 from ..models import HSNMaster
+
                 hsn = db.session.query(HSNMaster).filter_by(hsn_code=product.hsn_code).first()
                 if hsn and hsn.default_gst_rate:
                     rate = Decimal(str(hsn.default_gst_rate))
@@ -100,9 +103,7 @@ class IndiaGSTCalculator(BaseTaxCalculator):
             breakdown["SGST"] += tax / 2
 
         return TaxCalculationResult(
-            round(total_taxable, 2),
-            round(total_tax, 2),
-            {k: round(v, 2) for k, v in breakdown.items()}
+            round(total_taxable, 2), round(total_tax, 2), {k: round(v, 2) for k, v in breakdown.items()}
         )
 
 
@@ -146,9 +147,7 @@ class USSalesTaxCalculator(BaseTaxCalculator):
             breakdown["LOCAL_TAX"] += taxable * (base_rate / 100)
 
         return TaxCalculationResult(
-            round(total_taxable, 2),
-            round(total_tax, 2),
-            {k: round(v, 2) for k, v in breakdown.items()}
+            round(total_taxable, 2), round(total_tax, 2), {k: round(v, 2) for k, v in breakdown.items()}
         )
 
 
@@ -193,8 +192,4 @@ class GenericVATCalculator(BaseTaxCalculator):
             total_taxable += taxable
             total_tax += tax
 
-        return TaxCalculationResult(
-            round(total_taxable, 2),
-            round(total_tax, 2),
-            {tax_name: round(total_tax, 2)}
-        )
+        return TaxCalculationResult(round(total_taxable, 2), round(total_tax, 2), {tax_name: round(total_tax, 2)})

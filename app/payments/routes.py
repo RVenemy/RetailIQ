@@ -17,17 +17,10 @@ from .engine import get_payment_adapter
 @require_auth
 def list_providers():
     country_code = request.args.get("country_code", "IN")
-    providers = db.session.query(PaymentProvider).filter_by(
-        country_code=country_code, is_active=True
-    ).all()
+    providers = db.session.query(PaymentProvider).filter_by(country_code=country_code, is_active=True).all()
 
     data = [
-        {
-            "code": p.code,
-            "name": p.name,
-            "type": p.provider_type,
-            "supported_methods": p.supported_methods
-        }
+        {"code": p.code, "name": p.name, "type": p.provider_type, "supported_methods": p.supported_methods}
         for p in providers
     ]
 
@@ -46,9 +39,7 @@ def create_intent():
 
     store_id = g.current_user["store_id"]
 
-    txn = db.session.query(Transaction).filter_by(
-        transaction_id=transaction_id, store_id=store_id
-    ).first()
+    txn = db.session.query(Transaction).filter_by(transaction_id=transaction_id, store_id=store_id).first()
 
     if not txn:
         return format_response(False, error={"code": "NOT_FOUND", "message": "Transaction not found"}), 404
@@ -61,7 +52,7 @@ def create_intent():
             amount=float(txn.total_amount),
             currency="USD",
             txn_id=str(txn.transaction_id),
-            phone_number=data.get("phone_number")
+            phone_number=data.get("phone_number"),
         )
 
         # Record the attempt
@@ -74,7 +65,7 @@ def create_intent():
                 payment_method=data.get("method", "DEFAULT"),
                 amount=txn.total_amount,
                 currency_code="USD",
-                status="PENDING"
+                status="PENDING",
             )
             db.session.add(record)
             db.session.commit()

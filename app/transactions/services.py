@@ -364,4 +364,3 @@ def get_daily_summary_data(store_id, target_date):
         "gross_profit": gross_profit,
         "returns_count": returns_count,
     }
-

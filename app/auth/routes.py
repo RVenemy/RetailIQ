@@ -38,7 +38,10 @@ def register():
     existing_user = db.session.query(User).filter_by(mobile_number=data["mobile_number"]).first()
     if existing_user:
         return format_response(
-            success=False, message="Mobile number already registered", status_code=422, error={"code": "DUPLICATE_MOBILE"}
+            success=False,
+            message="Mobile number already registered",
+            status_code=422,
+            error={"code": "DUPLICATE_MOBILE"},
         )
 
     hashed_password = bcrypt.hashpw(data["password"].encode("utf-8"), bcrypt.gensalt(12)).decode("utf-8")
@@ -94,9 +97,13 @@ def verify_otp_endpoint():
                     "store_id": user.store_id,
                 }
             )
-        return format_response(success=False, message="User not found", status_code=404, error={"code": "USER_NOT_FOUND"})
+        return format_response(
+            success=False, message="User not found", status_code=404, error={"code": "USER_NOT_FOUND"}
+        )
 
-    return format_response(success=False, message="Invalid or expired OTP", status_code=422, error={"code": "INVALID_OTP"})
+    return format_response(
+        success=False, message="Invalid or expired OTP", status_code=422, error={"code": "INVALID_OTP"}
+    )
 
 
 @auth_bp.route("/login", methods=["POST"])
@@ -110,18 +117,26 @@ def login():
     user = db.session.query(User).filter_by(mobile_number=data["mobile_number"]).first()
     if not user or not user.password_hash:
         return format_response(
-            success=False, message="Invalid mobile number or password", status_code=401, error={"code": "INVALID_CREDENTIALS"}
+            success=False,
+            message="Invalid mobile number or password",
+            status_code=401,
+            error={"code": "INVALID_CREDENTIALS"},
         )
 
     if not bcrypt.checkpw(data["password"].encode("utf-8"), user.password_hash.encode("utf-8")):
         audit_log("LOGIN", "USER", user.user_id, result="FAILURE", meta_data={"reason": "wrong_password"})
         return format_response(
-            success=False, message="Invalid mobile number or password", status_code=401, error={"code": "INVALID_CREDENTIALS"}
+            success=False,
+            message="Invalid mobile number or password",
+            status_code=401,
+            error={"code": "INVALID_CREDENTIALS"},
         )
 
     if not user.is_active:
         audit_log("LOGIN", "USER", user.user_id, result="FAILURE", meta_data={"reason": "inactive_account"})
-        return format_response(success=False, message="Account is not verified", status_code=403, error={"code": "INACTIVE_ACCOUNT"})
+        return format_response(
+            success=False, message="Account is not verified", status_code=403, error={"code": "INACTIVE_ACCOUNT"}
+        )
 
     # MFA Check
     if user.mfa_enabled:
@@ -131,7 +146,9 @@ def login():
 
         if not verify_mfa_code(user.mfa_secret, mfa_code):
             audit_log("LOGIN", "USER", user.user_id, result="FAILURE", meta_data={"reason": "invalid_mfa"})
-            return format_response(success=False, message="Invalid MFA code", status_code=401, error={"code": "INVALID_MFA"})
+            return format_response(
+                success=False, message="Invalid MFA code", status_code=401, error={"code": "INVALID_MFA"}
+            )
 
     access_token = generate_access_token(user.user_id, user.store_id, user.role)
     refresh_token = generate_refresh_token(user.user_id)
@@ -171,7 +188,9 @@ def mfa_setup():
         )
 
     if user.mfa_enabled:
-        return format_response(success=False, message="MFA is already enabled", status_code=422, error={"code": "MFA_ALREADY_ENABLED"})
+        return format_response(
+            success=False, message="MFA is already enabled", status_code=422, error={"code": "MFA_ALREADY_ENABLED"}
+        )
 
     secret = generate_mfa_secret()
     user.mfa_secret = secret
@@ -200,7 +219,9 @@ def mfa_verify():
     code = data.get("mfa_code")
 
     if not code:
-        return format_response(success=False, message="MFA code is required", status_code=422, error={"code": "MISSING_CODE"})
+        return format_response(
+            success=False, message="MFA code is required", status_code=422, error={"code": "MISSING_CODE"}
+        )
 
     if verify_mfa_code(user.mfa_secret, code):
         user.mfa_enabled = True
@@ -228,7 +249,9 @@ def refresh():
 
     user = db.session.query(User).filter_by(user_id=int(user_id)).first()
     if not user or not user.is_active:
-        return format_response(success=False, message="User inactive or not found", status_code=401, error={"code": "UNAUTHORIZED"})
+        return format_response(
+            success=False, message="User inactive or not found", status_code=401, error={"code": "UNAUTHORIZED"}
+        )
 
     # Rotate refresh token
     redis_client.delete(f"refresh_token:{data['refresh_token']}")
@@ -289,7 +312,9 @@ def reset_password():
 
     user = db.session.query(User).filter_by(user_id=int(user_id)).first()
     if not user:
-        return format_response(success=False, message="User not found", status_code=404, error={"code": "USER_NOT_FOUND"})
+        return format_response(
+            success=False, message="User not found", status_code=404, error={"code": "USER_NOT_FOUND"}
+        )
 
     hashed_password = bcrypt.hashpw(data["new_password"].encode("utf-8"), bcrypt.gensalt(12)).decode("utf-8")
     user.password_hash = hashed_password

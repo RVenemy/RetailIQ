@@ -31,20 +31,17 @@ def generate_einvoice():
     txn = None
     try:
         import uuid
+
         parsed_txn_id = uuid.UUID(transaction_id)
-        txn = db.session.query(Transaction).filter_by(
-            transaction_id=parsed_txn_id, store_id=store_id
-        ).first()
+        txn = db.session.query(Transaction).filter_by(transaction_id=parsed_txn_id, store_id=store_id).first()
     except ValueError:
-        pass # Invalid UUID
+        pass  # Invalid UUID
 
     if not txn:
         return format_response(False, error={"code": "NOT_FOUND", "message": "Transaction not found"}), 404
 
     # Check if invoice already exists
-    existing = db.session.query(EInvoice).filter_by(
-        transaction_id=parsed_txn_id, country_code=country_code
-    ).first()
+    existing = db.session.query(EInvoice).filter_by(transaction_id=parsed_txn_id, country_code=country_code).first()
 
     if existing and existing.status in ("SUBMITTED", "ACCEPTED"):
         return format_response(
@@ -52,8 +49,8 @@ def generate_einvoice():
             data={
                 "status": existing.status,
                 "invoice_number": existing.invoice_number,
-                "qr_code_data": existing.qr_code_data
-            }
+                "qr_code_data": existing.qr_code_data,
+            },
         ), 200
 
     try:
@@ -70,7 +67,7 @@ def generate_einvoice():
             invoice_format=payload.get("format", "STANDARD"),
             xml_payload=payload.get("xml_payload"),
             invoice_number=payload.get("chave_acesso") or payload.get("uuid"),
-            status="DRAFT"
+            status="DRAFT",
         )
         db.session.add(invoice)
         db.session.commit()
@@ -93,8 +90,8 @@ def generate_einvoice():
                 "status": invoice.status,
                 "invoice_id": str(invoice.id),
                 "authority_ref": invoice.authority_ref,
-                "qr_code_url": invoice.qr_code_data
-            }
+                "qr_code_url": invoice.qr_code_data,
+            },
         ), 200
 
     except ValueError as e:
@@ -111,10 +108,9 @@ def get_einvoice_status(invoice_id):
 
     try:
         import uuid
+
         parsed_inv_id = uuid.UUID(invoice_id)
-        invoice = db.session.query(EInvoice).filter_by(
-            id=parsed_inv_id, store_id=store_id
-        ).first()
+        invoice = db.session.query(EInvoice).filter_by(id=parsed_inv_id, store_id=store_id).first()
     except ValueError:
         invoice = None
 
@@ -131,6 +127,6 @@ def get_einvoice_status(invoice_id):
             "authority_ref": invoice.authority_ref,
             "status": invoice.status,
             "submitted_at": invoice.submitted_at.isoformat() if invoice.submitted_at else None,
-            "qr_code_data": invoice.qr_code_data
-        }
+            "qr_code_data": invoice.qr_code_data,
+        },
     ), 200

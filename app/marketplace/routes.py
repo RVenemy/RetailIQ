@@ -42,7 +42,9 @@ def search():
     limit = 20
     offset = (page - 1) * limit
 
-    result = search_catalog(db.session, query, category, price_min, price_max, supplier_rating_min, moq_max, sort_by, limit, offset)
+    result = search_catalog(
+        db.session, query, category, price_min, price_max, supplier_rating_min, moq_max, sort_by, limit, offset
+    )
     return format_response(data=result)
 
 
@@ -81,14 +83,17 @@ def get_rfq_route(rfq_id):
         return format_response(error="RFQ not found", status_code=404)
 
     responses = db.session.query(RFQResponse).filter(RFQResponse.rfq_id == rfq_id).all()
-    resp_list = [{
-        "id": r.id,
-        "supplier_profile_id": r.supplier_profile_id,
-        "quoted_items": r.quoted_items,
-        "total_price": float(r.total_price),
-        "delivery_days": r.delivery_days,
-        "status": r.status
-    } for r in responses]
+    resp_list = [
+        {
+            "id": r.id,
+            "supplier_profile_id": r.supplier_profile_id,
+            "quoted_items": r.quoted_items,
+            "total_price": float(r.total_price),
+            "delivery_days": r.delivery_days,
+            "status": r.status,
+        }
+        for r in responses
+    ]
 
     result = {
         "id": rfq.id,
@@ -96,7 +101,7 @@ def get_rfq_route(rfq_id):
         "status": rfq.status,
         "matched_suppliers_count": rfq.matched_suppliers_count,
         "created_at": rfq.created_at.isoformat(),
-        "responses": resp_list
+        "responses": resp_list,
     }
 
     return format_response(data=result)
@@ -145,37 +150,48 @@ def list_orders_route():
 
     order_list = []
     for order in orders:
-        order_list.append({
-            "id": order.id,
-            "order_number": order.order_number,
-            "supplier_profile_id": order.supplier_profile_id,
-            "status": order.status,
-            "total": float(order.total),
-            "payment_status": order.payment_status,
-            "financed": order.financed_by_retailiq,
-            "created_at": order.created_at.isoformat(),
-            "expected_delivery": order.expected_delivery.isoformat() if order.expected_delivery else None
-        })
+        order_list.append(
+            {
+                "id": order.id,
+                "order_number": order.order_number,
+                "supplier_profile_id": order.supplier_profile_id,
+                "status": order.status,
+                "total": float(order.total),
+                "payment_status": order.payment_status,
+                "financed": order.financed_by_retailiq,
+                "created_at": order.created_at.isoformat(),
+                "expected_delivery": order.expected_delivery.isoformat() if order.expected_delivery else None,
+            }
+        )
 
-    return format_response(data={"orders": order_list, "total": total, "page": page, "pages": (total + limit - 1) // limit})
+    return format_response(
+        data={"orders": order_list, "total": total, "page": page, "pages": (total + limit - 1) // limit}
+    )
 
 
 @marketplace_bp.route("/orders/<int:order_id>", methods=["GET"])
 @require_auth
 def get_order_route(order_id):
     merchant_id = g.current_user["store_id"]
-    order = db.session.query(MarketplacePurchaseOrder).filter(MarketplacePurchaseOrder.id == order_id, MarketplacePurchaseOrder.merchant_id == merchant_id).first()
+    order = (
+        db.session.query(MarketplacePurchaseOrder)
+        .filter(MarketplacePurchaseOrder.id == order_id, MarketplacePurchaseOrder.merchant_id == merchant_id)
+        .first()
+    )
 
     if not order:
         return format_response(error="Order not found", status_code=404)
 
     items = db.session.query(MarketplacePOItem).filter(MarketplacePOItem.order_id == order.id).all()
-    item_list = [{
-        "catalog_item_id": i.catalog_item_id,
-        "quantity": i.quantity,
-        "unit_price": float(i.unit_price),
-        "subtotal": float(i.subtotal)
-    } for i in items]
+    item_list = [
+        {
+            "catalog_item_id": i.catalog_item_id,
+            "quantity": i.quantity,
+            "unit_price": float(i.unit_price),
+            "subtotal": float(i.subtotal),
+        }
+        for i in items
+    ]
 
     res = {
         "id": order.id,
@@ -192,7 +208,7 @@ def get_order_route(order_id):
         "created_at": order.created_at.isoformat(),
         "expected_delivery": order.expected_delivery.isoformat() if order.expected_delivery else None,
         "shipping_tracking": order.shipping_tracking,
-        "items": item_list
+        "items": item_list,
     }
 
     return format_response(data=res)
@@ -202,7 +218,11 @@ def get_order_route(order_id):
 @require_auth
 def track_order_route(order_id):
     merchant_id = g.current_user["store_id"]
-    order = db.session.query(MarketplacePurchaseOrder).filter(MarketplacePurchaseOrder.id == order_id, MarketplacePurchaseOrder.merchant_id == merchant_id).first()
+    order = (
+        db.session.query(MarketplacePurchaseOrder)
+        .filter(MarketplacePurchaseOrder.id == order_id, MarketplacePurchaseOrder.merchant_id == merchant_id)
+        .first()
+    )
 
     if not order:
         return format_response(error="Order not found", status_code=404)
@@ -216,12 +236,16 @@ def track_order_route(order_id):
 
     events = get_tracking_events(tracking_number)
 
-    return format_response(data={
-        "status": order.status,
-        "tracking_events": events,
-        "estimated_delivery": order.expected_delivery.isoformat() if order.expected_delivery else None,
-        "logistics_provider": order.shipping_tracking.get("provider", "Unknown") if order.shipping_tracking else None
-    })
+    return format_response(
+        data={
+            "status": order.status,
+            "tracking_events": events,
+            "estimated_delivery": order.expected_delivery.isoformat() if order.expected_delivery else None,
+            "logistics_provider": order.shipping_tracking.get("provider", "Unknown")
+            if order.shipping_tracking
+            else None,
+        }
+    )
 
 
 @marketplace_bp.route("/suppliers/dashboard", methods=["GET"])
@@ -245,18 +269,23 @@ def supplier_catalog_route(supplier_id):
     limit = 50
     offset = (page - 1) * limit
 
-    q = db.session.query(CatalogItem).filter(CatalogItem.supplier_profile_id == supplier_id, CatalogItem.is_active == True)
+    q = db.session.query(CatalogItem).filter(
+        CatalogItem.supplier_profile_id == supplier_id, CatalogItem.is_active == True
+    )
     total = q.count()
     items = q.limit(limit).offset(offset).all()
 
-    item_list = [{
-        "id": i.id,
-        "sku": i.sku,
-        "name": i.name,
-        "category": i.category,
-        "unit_price": float(i.unit_price),
-        "moq": i.moq
-    } for i in items]
+    item_list = [
+        {
+            "id": i.id,
+            "sku": i.sku,
+            "name": i.name,
+            "category": i.category,
+            "unit_price": float(i.unit_price),
+            "moq": i.moq,
+        }
+        for i in items
+    ]
 
     return format_response(data={"items": item_list, "total": total})
 
@@ -268,9 +297,10 @@ def supplier_onboard_route():
     # Normally merchant creates a supplier, or supplier signs themselves up
     # Here we mock it by creating a SupplierProfile
 
-    supplier_id = data.get("supplier_id") # Must map to an existing Supplier UUID if necessary, or we create one
+    supplier_id = data.get("supplier_id")  # Must map to an existing Supplier UUID if necessary, or we create one
     if not supplier_id:
         from app.models import Supplier
+
         # Create base supplier first
         store_id = g.current_user["store_id"]
         s = Supplier(store_id=store_id, name=data.get("business_name", "New Supplier"))
@@ -284,10 +314,9 @@ def supplier_onboard_route():
         business_type=data.get("business_type", "WHOLESALER"),
         verified=False,
         categories=data.get("categories", []),
-        payment_terms=data.get("payment_terms", {"net30": True})
+        payment_terms=data.get("payment_terms", {"net30": True}),
     )
     db.session.add(profile)
     db.session.commit()
 
     return format_response(data={"id": profile.id, "business_name": profile.business_name}, status_code=201)
-

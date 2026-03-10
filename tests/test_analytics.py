@@ -482,8 +482,12 @@ class TestDashboardEndpoint:
         _db.session.commit()
 
         # Seed categories with different revenues
-        _seed_category_summary(test_store.store_id, test_category.category_id, datetime.now(timezone.utc).date(), 1, base_rev=1000.0)
-        _seed_category_summary(test_store.store_id, cat2.category_id, datetime.now(timezone.utc).date(), 1, base_rev=200.0)
+        _seed_category_summary(
+            test_store.store_id, test_category.category_id, datetime.now(timezone.utc).date(), 1, base_rev=1000.0
+        )
+        _seed_category_summary(
+            test_store.store_id, cat2.category_id, datetime.now(timezone.utc).date(), 1, base_rev=200.0
+        )
 
         resp = client.get("/api/v1/analytics/dashboard", headers=owner_headers)
         data = resp.get_json()["data"]
@@ -504,6 +508,8 @@ class TestDashboardEndpoint:
 
         assert "payment_mode_breakdown" in data
         assert isinstance(data["payment_mode_breakdown"], list)
+
+
 def test_analytics_empty_range(client, owner_headers):
     # Test a date range far in the future
     resp = client.get("/api/v1/analytics/revenue?start=2099-01-01&end=2099-01-07", headers=owner_headers)

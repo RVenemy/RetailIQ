@@ -122,9 +122,7 @@ class CountryTaxConfig(Base):
     compliance_notes: Mapped[str | None] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    __table_args__ = (
-        UniqueConstraint("country_code", "tax_type", name="uq_country_tax_type"),
-    )
+    __table_args__ = (UniqueConstraint("country_code", "tax_type", name="uq_country_tax_type"),)
 
 
 class StoreTaxRegistration(Base):
@@ -213,9 +211,7 @@ class StorePaymentMethod(Base):
     credentials_encrypted: Mapped[dict | None] = mapped_column(JSONB)
     created_at: Mapped[datetime | None] = mapped_column(TIMESTAMP, default=lambda: datetime.now(timezone.utc))
 
-    __table_args__ = (
-        UniqueConstraint("store_id", "provider_id", name="uq_store_payment_provider"),
-    )
+    __table_args__ = (UniqueConstraint("store_id", "provider_id", name="uq_store_payment_provider"),)
 
 
 class PaymentRecord(Base):

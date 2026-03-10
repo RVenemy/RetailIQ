@@ -1,7 +1,10 @@
 from datetime import datetime, timedelta, timezone
+
 from sqlalchemy import and_, case, distinct, func
+
 from .. import db
 from ..models import Category, Customer, Product, Transaction, TransactionItem
+
 
 def get_top_customers(store_id, metric, limit):
     # Aggregate over non-return transactions that have a customer
@@ -65,6 +68,7 @@ def get_top_customers(store_id, metric, limit):
             }
         )
     return data
+
 
 def get_customer_analytics(store_id):
     now = datetime.now(timezone.utc)
@@ -156,6 +160,7 @@ def get_customer_analytics(store_id):
         "new_revenue": _month_revenue("new"),
         "repeat_revenue": _month_revenue("repeat"),
     }
+
 
 def get_customer_summary_data(store_id, customer_id):
     spend_row = (

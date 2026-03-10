@@ -29,7 +29,7 @@ def seeded_finance(app, test_store):
             min_amount=1000,
             max_amount=50000,
             interest_rate_bps=1200,  # 12%
-            max_term_days=365
+            max_term_days=365,
         )
         rev_advance = LoanProduct(
             name="Revenue Advance",
@@ -37,7 +37,7 @@ def seeded_finance(app, test_store):
             min_amount=500,
             max_amount=10000,
             interest_rate_bps=1500,  # 15%
-            max_term_days=90
+            max_term_days=90,
         )
 
         # 2. Insurance Products
@@ -46,27 +46,23 @@ def seeded_finance(app, test_store):
             category="WEATHER",
             description="Pays out if rainfall exceeds 50mm",
             premium_monthly=500,
-            max_coverage=10000
+            max_coverage=10000,
         )
 
         db.session.add_all([term_loan, rev_advance, weather_ins])
         db.session.commit()
 
-        return {
-            "term_loan_id": term_loan.id,
-            "rev_advance_id": rev_advance.id,
-            "weather_ins_id": weather_ins.id
-        }
+        return {"term_loan_id": term_loan.id, "rev_advance_id": rev_advance.id, "weather_ins_id": weather_ins.id}
 
 
 def test_kyc_flow(client, owner_headers):
     """Test the KYC submission and status flow."""
     # 1. Submit KYC
-    resp = client.post("/api/v2/finance/kyc/submit", json={
-        "business_type": "LLP",
-        "tax_id": "ABCDE1234F",
-        "document_urls": {"identity": "https://s3.com/id.jpg"}
-    }, headers=owner_headers)
+    resp = client.post(
+        "/api/v2/finance/kyc/submit",
+        json={"business_type": "LLP", "tax_id": "ABCDE1234F", "document_urls": {"identity": "https://s3.com/id.jpg"}},
+        headers=owner_headers,
+    )
     assert resp.status_code == 201
     assert resp.json["status"] == "PENDING"
 
@@ -87,7 +83,7 @@ def test_credit_scoring_logic(app, client, owner_headers, test_store):
                 date=datetime.now(timezone.utc).date() - timedelta(days=i),
                 revenue=Decimal("1000.00"),
                 profit=Decimal("200.00"),
-                transaction_count=20
+                transaction_count=20,
             )
             db.session.add(summary)
         db.session.commit()
@@ -115,13 +111,17 @@ def test_ledger_double_entry(app, test_store):
             debit_account_type="OPERATING",
             credit_account_type="REVENUE",
             amount=Decimal("100.00"),
-            description="Test entry"
+            description="Test entry",
         )
         db.session.commit()
 
         # Check balances
-        op_acc = db.session.query(FinancialAccount).filter_by(store_id=test_store.store_id, account_type="OPERATING").one()
-        rev_acc = db.session.query(FinancialAccount).filter_by(store_id=test_store.store_id, account_type="REVENUE").one()
+        op_acc = (
+            db.session.query(FinancialAccount).filter_by(store_id=test_store.store_id, account_type="OPERATING").one()
+        )
+        rev_acc = (
+            db.session.query(FinancialAccount).filter_by(store_id=test_store.store_id, account_type="REVENUE").one()
+        )
 
         assert op_acc.balance == Decimal("100.00")
         assert rev_acc.balance == Decimal("100.00")
@@ -134,16 +134,17 @@ def test_ledger_double_entry(app, test_store):
 def test_loan_lifecycle(app, client, owner_headers, seeded_finance):
     """Test applying, approving, disbursing, and repaying a loan."""
     # 1. Apply
-    resp = client.post("/api/v2/finance/loans/apply", json={
-        "product_id": seeded_finance["term_loan_id"],
-        "amount": 5000,
-        "term_days": 180
-    }, headers=owner_headers)
+    resp = client.post(
+        "/api/v2/finance/loans/apply",
+        json={"product_id": seeded_finance["term_loan_id"], "amount": 5000, "term_days": 180},
+        headers=owner_headers,
+    )
     assert resp.status_code == 201
     loan_id = resp.json["application_id"]
 
     # 2. Approve (Admin-like internal action, using service directly)
     from app.finance.loan_engine import approve_loan
+
     with app.app_context():
         approve_loan(loan_id, Decimal("5000.00"))
         db.session.commit()
@@ -165,10 +166,9 @@ def test_loan_lifecycle(app, client, owner_headers, seeded_finance):
 
 def test_payment_processing(client, owner_headers):
     """Test card payment processing and fee deduction."""
-    resp = client.post("/api/v2/finance/payments/process", json={
-        "amount": 1000.00,
-        "payment_method": "UPI"
-    }, headers=owner_headers)
+    resp = client.post(
+        "/api/v2/finance/payments/process", json={"amount": 1000.00, "payment_method": "UPI"}, headers=owner_headers
+    )
     assert resp.status_code == 200
     assert resp.json["net_amount"] == 1000.00 - (1000.00 * 0.029 + 0.30)
     assert resp.json["fees"] == (1000.00 * 0.029 + 0.30)
@@ -177,10 +177,11 @@ def test_payment_processing(client, owner_headers):
 def test_treasury_sweeps(app, client, owner_headers, test_store):
     """Test automated treasury sweeps."""
     # 1. Set config
-    client.put("/api/v2/finance/treasury/sweep-config", json={
-        "strategy": "BALANCED",
-        "min_balance": 1000.00
-    }, headers=owner_headers)
+    client.put(
+        "/api/v2/finance/treasury/sweep-config",
+        json={"strategy": "BALANCED", "min_balance": 1000.00},
+        headers=owner_headers,
+    )
 
     from app.finance.ledger import record_transaction
     from app.finance.treasury_manager import perform_sweep
@@ -192,7 +193,7 @@ def test_treasury_sweeps(app, client, owner_headers, test_store):
             debit_account_type="OPERATING",
             credit_account_type="REVENUE",
             amount=Decimal("5000.00"),
-            description="Initial seed"
+            description="Initial seed",
         )
         db.session.commit()
 
@@ -213,12 +214,13 @@ def test_parametric_insurance(app, test_store, seeded_finance):
     with app.app_context():
         # Give some cash for premium
         from app.finance.ledger import record_transaction
+
         record_transaction(
             store_id=test_store.store_id,
             debit_account_type="OPERATING",
             credit_account_type="REVENUE",
             amount=Decimal("1000.00"),
-            description="Cash for premium"
+            description="Cash for premium",
         )
 
         # 1. Enroll

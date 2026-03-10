@@ -7,9 +7,7 @@ import jwt
 import redis
 from flask import current_app
 
-
 from app.utils.responses import standard_json as format_response
-
 
 
 def get_redis_client():

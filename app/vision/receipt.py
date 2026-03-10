@@ -1,6 +1,7 @@
 import logging
 
 from PIL import Image
+
 Image.MAX_IMAGE_PIXELS = 10_000_000  # Prevent Decompression Bomb attacks
 
 from transformers import TrOCRProcessor, VisionEncoderDecoderModel

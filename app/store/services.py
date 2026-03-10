@@ -12,17 +12,18 @@ DEFAULT_CATEGORIES = {
 
 MAX_CATEGORIES = 50
 
+
 class StoreService:
     @staticmethod
     def seed_default_categories(store_id: int, store_type: str):
         """Seeds default categories if none exist and store_type matches defined defaults."""
         if store_type not in DEFAULT_CATEGORIES:
             return 0
-            
+
         existing_count = db.session.query(Category.category_id).filter_by(store_id=store_id).count()
         if existing_count > 0:
             return 0
-            
+
         added = 0
         for cat_name in DEFAULT_CATEGORIES[store_type]:
             db.session.add(

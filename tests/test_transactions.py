@@ -166,33 +166,33 @@ def test_batch_transaction_partial_failure(app, client, init_db, auth_headers):
     """
     txn_id_valid = str(uuid.uuid4())
     txn_id_invalid = str(uuid.uuid4())
-    
+
     payload = {
         "transactions": [
             {
                 "transaction_id": txn_id_valid,
                 "payment_mode": "CASH",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "line_items": [{"product_id": str(init_db["prod1"].product_id), "quantity": 1, "selling_price": 10.0}]
+                "line_items": [{"product_id": str(init_db["prod1"].product_id), "quantity": 1, "selling_price": 10.0}],
             },
             {
                 "transaction_id": txn_id_invalid,
                 "payment_mode": "CASH",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "line_items": [{"product_id": 999999, "quantity": 1, "selling_price": 10.0}] # Invalid product
-            }
+                "line_items": [{"product_id": 999999, "quantity": 1, "selling_price": 10.0}],  # Invalid product
+            },
         ]
     }
-    
+
     resp = client.post("/api/v1/transactions/batch", json=payload, headers=auth_headers["staff"])
     assert resp.status_code == 200
     data = resp.get_json()["data"]
-    
+
     assert data["accepted"] == 1
     assert data["rejected"] == 1
     assert len(data["errors"]) == 1
     assert data["errors"][0]["transaction_id"] == txn_id_invalid
-    
+
     # Verify the valid one was actually committed
     with app.app_context():
         txn = db.session.get(Transaction, uuid.UUID(txn_id_valid))

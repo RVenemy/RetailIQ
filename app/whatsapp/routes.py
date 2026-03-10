@@ -203,7 +203,8 @@ def send_alert():
     if not config or not config.phone_number_id or not config.access_token_encrypted:
         return format_response(
             False,
-            error={"code": "WA_NOT_CONFIGURED", "message": "WhatsApp API is not configured or active for this store"}, status_code=422
+            error={"code": "WA_NOT_CONFIGURED", "message": "WhatsApp API is not configured or active for this store"},
+            status_code=422,
         )
 
     # Find owner phone
@@ -256,7 +257,9 @@ def send_po():
     try:
         po_uuid = uuid.UUID(po_id_str)
     except ValueError:
-        return format_response(False, error={"code": "VALIDATION_ERROR", "message": "Invalid PO ID format"}, status_code=422)
+        return format_response(
+            False, error={"code": "VALIDATION_ERROR", "message": "Invalid PO ID format"}, status_code=422
+        )
 
     po = db.session.query(PurchaseOrder).filter_by(id=po_uuid, store_id=store_id).first()
     if not po:
@@ -270,7 +273,9 @@ def send_po():
 
     config = db.session.query(WhatsAppConfig).filter_by(store_id=store_id, is_active=True).first()
     if not config or not config.phone_number_id or not config.access_token_encrypted:
-        return format_response(False, error={"code": "WA_NOT_CONFIGURED", "message": "WhatsApp is not configured"}, status_code=422)
+        return format_response(
+            False, error={"code": "WA_NOT_CONFIGURED", "message": "WhatsApp is not configured"}, status_code=422
+        )
 
     text = format_po_message(po_id_str, db.session)
     if not text:

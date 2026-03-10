@@ -97,11 +97,7 @@ def _rebuild_aggregates_inline(store_id, target_date):
         JOIN transaction_items ti ON t.transaction_id = ti.transaction_id
         WHERE t.store_id = :sid AND t.created_at >= :start_d AND t.created_at < :end_d AND t.is_return = 0
     """),
-        {
-            "sid": store_id,
-            "start_d": str(target_date),
-            "end_d": str(target_date + timedelta(days=1))
-        },
+        {"sid": store_id, "start_d": str(target_date), "end_d": str(target_date + timedelta(days=1))},
     ).fetchone()
 
     if row and row.txn_count > 0:
@@ -141,11 +137,7 @@ def _rebuild_aggregates_inline(store_id, target_date):
         WHERE t.store_id = :sid AND t.created_at >= :start_d AND t.created_at < :end_d AND t.is_return = 0
         GROUP BY ti.product_id
     """),
-        {
-            "sid": store_id,
-            "start_d": str(target_date),
-            "end_d": str(target_date + timedelta(days=1))
-        },
+        {"sid": store_id, "start_d": str(target_date), "end_d": str(target_date + timedelta(days=1))},
     ).fetchall()
 
     for sr in sku_rows:

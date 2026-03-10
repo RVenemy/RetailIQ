@@ -80,7 +80,7 @@ def forecast_store_endpoint():
                 "code": "NOT_FOUND",
                 "message": "No store forecast available. Run the batch forecasting task first.",
             },
-            status_code=404
+            status_code=404,
         )
 
     points = _rows_to_points(rows)
@@ -144,9 +144,7 @@ def forecast_sku_endpoint(product_id: int):
 
     if not product_row:
         return format_response(
-            success=False,
-            error={"code": "NOT_FOUND", "message": "Product not found"},
-            status_code=404
+            success=False, error={"code": "NOT_FOUND", "message": "Product not found"}, status_code=404
         )
 
     rows = db.session.execute(
@@ -172,7 +170,7 @@ def forecast_sku_endpoint(product_id: int):
                 "message": "No forecast found for this SKU. It may not be in the top-20% revenue tier, "
                 "or the batch forecast has not run yet.",
             },
-            status_code=404
+            status_code=404,
         )
 
     points = _rows_to_points(rows)

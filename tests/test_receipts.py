@@ -354,7 +354,6 @@ class TestReceiptTemplate:
         assert put_resp2.get_json()["data"]["header_text"] == payload["header_text"]
 
 
-
 class TestPrintJobs:
     def test_print_job_created(self, client, setup, seeded_transaction):
         """POST /receipts/print with valid transaction_id should return 201 + job_id."""
@@ -417,7 +416,6 @@ class TestPrintJobs:
             headers=setup["headers"],
         )
         assert resp.status_code == 404
-
 
 
 class TestReceiptFormatter:
