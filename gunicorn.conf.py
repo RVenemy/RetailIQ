@@ -14,7 +14,8 @@ bind = os.environ.get("GUNICORN_BIND", "0.0.0.0:5000")
 # ---------------------------------------------------------------------------
 # Fargate vCPU is typically 0.25–4 vCPU. Formula: min(cpu_count * 2 + 1, max)
 # For 1 vCPU Fargate task → 3 workers; for 0.5 vCPU → 2 workers.
-_max_workers = int(os.environ.get("GUNICORN_MAX_WORKERS", "4"))
+# Reduced to 1 worker to troubleshoot startup issues
+_max_workers = int(os.environ.get("GUNICORN_MAX_WORKERS", "1"))
 workers = min(multiprocessing.cpu_count() * 2 + 1, _max_workers)
 
 # gthread: threaded workers — good for I/O-bound Flask apps (DB/Redis calls)
@@ -33,7 +34,8 @@ keepalive = 5
 # ---------------------------------------------------------------------------
 # Preload the application to share memory across forked workers.
 # Reduces per-worker memory by ~30-40% for Prophet/sklearn models.
-preload_app = True
+# Disabled temporarily to troubleshoot startup issues
+preload_app = False
 
 # ---------------------------------------------------------------------------
 # Logging (stdout/stderr for CloudWatch / container log drivers)

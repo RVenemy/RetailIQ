@@ -31,6 +31,13 @@
         "awslogs-region": "us-east-1",
         "awslogs-stream-prefix": "api"
       }
+    },
+    "healthCheck": {
+      "command": ["python3", "-c", "import sys; sys.exit(0)"],
+      "interval": 30,
+      "timeout": 5,
+      "retries": 3,
+      "startPeriod": 60
     }
   }]
 }
