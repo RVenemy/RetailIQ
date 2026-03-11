@@ -780,6 +780,7 @@ pytest -q
 - Uses in-memory SQLite with shared `StaticPool` for fast isolated tests.
 - Compilers map PG-specific `JSONB`/`UUID` for SQLite compatibility.
 - Test fixture injects ephemeral JWT keys.
+- `db_session` fixture now creates a dedicated SQLAlchemy `sessionmaker` per test, binding it to a fresh transaction so parallelized tests no longer clash on the global scoped session (prevents `InvalidRequestError`).
 
 ### Recommended test commands
 ```bash

@@ -122,9 +122,21 @@ def db_session(app):
     TestSession = sessionmaker(bind=connection)
     session = TestSession()
 
+    # Begin a SAVEPOINT so that test-level commits don't persist past this fixture
+    session.begin_nested()
+
+    @event.listens_for(session, "after_transaction_end")
+    def restart_savepoint(sess, trans):  # pragma: no cover - fixture plumbing
+        # When the SAVEPOINT ends (via session.commit()), reopen it so subsequent
+        # operations remain sandboxed until the outer transaction rolls back.
+        if trans.nested and not trans._parent.nested:
+            sess.begin_nested()
+
     try:
         yield session
     finally:
+        # Remove the listener before tearing down to avoid cross-test leaks
+        event.remove(session, "after_transaction_end", restart_savepoint)
         session.close()
         transaction.rollback()
         connection.close()
