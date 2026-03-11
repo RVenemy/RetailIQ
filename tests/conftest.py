@@ -11,9 +11,10 @@ Flask request sessions) to share the exact same connection/DB instance.
 import os
 
 import pytest
-from sqlalchemy import event
+from sqlalchemy import BigInteger, event
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 
@@ -26,9 +27,6 @@ def _compile_jsonb(type_, compiler, **kw):
 @compiles(UUID, "sqlite")
 def _compile_uuid(type_, compiler, **kw):
     return "VARCHAR"
-
-
-from sqlalchemy import BigInteger
 
 
 @compiles(BigInteger, "sqlite")
@@ -120,15 +118,16 @@ def db_session(app):
     connection = _db.engine.connect()
     transaction = connection.begin()
 
-    # Bind a session to the transaction
-    session = _db.session(bind=connection)
+    # Bind a NEW session to the transaction instead of reusing the global scoped session
+    TestSession = sessionmaker(bind=connection)
+    session = TestSession()
 
-    yield session
-
-    # Rollback the transaction and close the connection
-    session.close()
-    transaction.rollback()
-    connection.close()
+    try:
+        yield session
+    finally:
+        session.close()
+        transaction.rollback()
+        connection.close()
 
 
 # ---------------------------------------------------------------------------
