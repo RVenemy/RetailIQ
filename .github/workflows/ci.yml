@@ -52,19 +52,29 @@ jobs:
         with:
           version: "latest"
           cache-dependency-path: requirements-dev.txt
+          enable-cache: true
+
+      - name: Create virtual environment
+        run: uv venv
 
       - name: Install tools
         run: |
-          uv pip install --system ruff==0.4.4 bandit==1.7.8 pip-audit==2.7.3 alembic==1.13.1
+          source .venv/bin/activate
+          uv pip install ruff==0.4.4 bandit==1.7.8 pip-audit==2.7.3 alembic==1.13.1
 
       - name: Ruff check (lint)
-        run: ruff check . --output-format=github
+        run: |
+          source .venv/bin/activate
+          ruff check . --output-format=github
 
       - name: Ruff format check
-        run: ruff format --check .
+        run: |
+          source .venv/bin/activate
+          ruff format --check .
 
       - name: Bandit SAST scan
         run: |
+          source .venv/bin/activate
           bandit -r app/ \
             -s B101,B601 \
             -f json -o bandit-report.json \
@@ -73,7 +83,9 @@ jobs:
           bandit -r app/ -s B101,B601 -ll || true
 
       - name: pip-audit (known CVEs)
-        run: pip-audit -r requirements.txt --desc
+        run: |
+          source .venv/bin/activate
+          pip-audit -r requirements.txt --desc
         continue-on-error: false
 
       - name: Create .env from example
@@ -81,6 +93,7 @@ jobs:
 
       - name: Check for un-generated migrations
         run: |
+          source .venv/bin/activate
           # Simple check: just ensure alembic can run without errors
           if ! alembic check; then
             echo "::warning:: alembic check detected differences, but these may be due to dialect-specific differences"
