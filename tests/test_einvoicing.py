@@ -22,8 +22,12 @@ def seed_countries(app):
     ]:
         db.session.add(
             Country(
-                code=code, name=name, default_currency=cur,
-                default_locale=loc, timezone=tz, tax_system=tax,
+                code=code,
+                name=name,
+                default_currency=cur,
+                default_locale=loc,
+                timezone=tz,
+                tax_system=tax,
             )
         )
     db.session.commit()
