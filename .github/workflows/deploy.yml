@@ -82,7 +82,7 @@ jobs:
         run: |
           pytest tests/ \
             -v \
-            -n auto  # Parallel execution
+            -n auto \
             --tb=short \
             --strict-markers
 
