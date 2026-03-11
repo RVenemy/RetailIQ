@@ -31,12 +31,5 @@
       }
     },
     "essential": true,
-    "healthCheck": {
-      "command": ["CMD-SHELL", "python3 -c \"import sys; sys.exit(0);\""],
-      "interval": 60,
-      "timeout": 30,
-      "retries": 5,
-      "startPeriod": 120
-    }
   }]
 }

@@ -31,13 +31,6 @@
         "awslogs-region": "us-east-1",
         "awslogs-stream-prefix": "api"
       }
-    },
-    "healthCheck": {
-      "command": ["CMD-SHELL", "python3 -c \"import socket; s=socket.socket(); s.connect(('localhost', 5000)); s.close();\" || exit 1"],
-      "interval": 60,
-      "timeout": 30,
-      "retries": 5,
-      "startPeriod": 120
     }
   }]
 }
