@@ -145,7 +145,7 @@ jobs:
         run: |
           pytest tests/ \
             -v \
-            -n auto  # Parallel execution with pytest-xdist
+            -n auto \
             --tb=short \
             --strict-markers \
             --cov=app \
@@ -153,7 +153,7 @@ jobs:
             --cov-report=xml:coverage.xml \
             --cov-report=html:htmlcov \
             --junitxml=results.xml \
-            --maxfail=10  # Stop after 10 failures
+            --maxfail=10
 
       - name: Upload test results
         if: always()
