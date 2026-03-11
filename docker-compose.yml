@@ -1,10 +1,16 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - retailiq-backend:latest
+    image: retailiq-backend:latest
     ports:
       - "5000:5000"
     volumes:
       - .:/app
+      - pip-cache:/root/.cache/pip
     env_file:
       - .env
     depends_on:
@@ -37,9 +43,15 @@ services:
       - "6379:6379"
 
   worker:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - retailiq-backend:latest
+    image: retailiq-backend:latest
     volumes:
       - .:/app
+      - pip-cache:/root/.cache/pip
     env_file:
       - .env
     depends_on:
@@ -50,9 +62,15 @@ services:
     command: celery -A celery_worker.celery_app worker -l info --uid nobody --gid nogroup
 
   beat:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - retailiq-backend:latest
+    image: retailiq-backend:latest
     volumes:
       - .:/app
+      - pip-cache:/root/.cache/pip
     env_file:
       - .env
     depends_on:
@@ -64,3 +82,4 @@ services:
 
 volumes:
   postgres_data:
+  pip-cache:

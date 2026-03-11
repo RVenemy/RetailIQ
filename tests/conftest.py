@@ -118,12 +118,12 @@ def db_session(app):
     """Create a new database session with a fresh transaction for each test."""
     connection = _db.engine.connect()
     transaction = connection.begin()
-    
+
     # Bind a session to the transaction
     session = _db.session(bind=connection)
-    
+
     yield session
-    
+
     # Rollback the transaction and close the connection
     session.close()
     transaction.rollback()
