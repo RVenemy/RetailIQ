@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.models import APIUsageRecord, DeveloperApplication, WebhookEvent
+from app.models.missing_models import Developer
 from app.tasks.webhook_tasks import deliver_webhook, sync_api_usage
 
 
@@ -13,8 +14,13 @@ def mock_task_session(app):
     from app import db
 
     @contextlib.contextmanager
-    def _mock_session():
-        yield db.session
+    def _mock_session(**kwargs):
+        try:
+            yield db.session
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
 
     with patch("app.tasks.webhook_tasks.task_session", new=_mock_session):
         yield
@@ -24,8 +30,16 @@ def mock_task_session(app):
 def test_app_and_event(app, test_store, test_owner):
     from app import db
 
+    dev = Developer(
+        user_id=test_owner.user_id,
+        name="Test Dev",
+        email="dev@test.com",
+    )
+    db.session.add(dev)
+    db.session.flush()
+
     dev_app = DeveloperApplication(
-        developer_id=test_owner.user_id,
+        developer_id=dev.id,
         name="Test App",
         client_id="test_client_id",
         client_secret_hash="fake_hash",
@@ -101,8 +115,6 @@ def test_deliver_webhook_success(app, test_app_and_event):
 
 
 def test_deliver_webhook_failure_retries(app, test_app_and_event):
-    from app import db
-
     _, event = test_app_and_event
 
     with (
@@ -122,8 +134,6 @@ def test_deliver_webhook_failure_retries(app, test_app_and_event):
 
 def test_deliver_webhook_request_exception(app, test_app_and_event):
     import requests
-
-    from app import db
 
     _, event = test_app_and_event
 
@@ -152,13 +162,32 @@ def test_sync_api_usage_no_keys():
         mock_redis.hgetall.assert_not_called()
 
 
-def test_sync_api_usage_success(app):
+def test_sync_api_usage_success(app, test_owner):
     from app import db
+
+    dev = Developer(
+        user_id=test_owner.user_id,
+        name="Usage Dev",
+        email="usage@test.com",
+    )
+    db.session.add(dev)
+    db.session.flush()
+
+    dev_app = DeveloperApplication(
+        developer_id=dev.id,
+        name="Usage App",
+        client_id="usage_client",
+        client_secret_hash="fake",
+        app_type="BACKEND",
+    )
+    db.session.add(dev_app)
+    db.session.commit()
+    dev_app_id = dev_app.id
 
     with patch("app.auth.utils.get_redis_client") as mock_get_redis:
         mock_redis = MagicMock()
         dt = datetime.now(timezone.utc)
-        key = f"usage:1:/api/test:GET:{dt.isoformat()}"
+        key = f"usage:{dev_app_id}:/api/test:GET:{dt.isoformat()}"
         mock_redis.keys.return_value = [key]
         mock_redis.hgetall.return_value = {
             "request_count": "10",
@@ -170,7 +199,7 @@ def test_sync_api_usage_success(app):
 
         sync_api_usage()
 
-        record = db.session.query(APIUsageRecord).filter_by(app_id=1).first()
+        record = db.session.query(APIUsageRecord).filter_by(app_id=dev_app_id).first()
         assert record is not None
         assert record.request_count == 10
         assert record.error_count == 1
@@ -180,14 +209,33 @@ def test_sync_api_usage_success(app):
         mock_redis.delete.assert_called_once_with(key)
 
 
-def test_sync_api_usage_existing_record(app):
+def test_sync_api_usage_existing_record(app, test_owner):
     from app import db
+
+    dev = Developer(
+        user_id=test_owner.user_id,
+        name="Usage Dev 2",
+        email="usage2@test.com",
+    )
+    db.session.add(dev)
+    db.session.flush()
+
+    dev_app = DeveloperApplication(
+        developer_id=dev.id,
+        name="Usage App 2",
+        client_id="usage_client_2",
+        client_secret_hash="fake",
+        app_type="BACKEND",
+    )
+    db.session.add(dev_app)
+    db.session.commit()
+    dev_app_id = dev_app.id
 
     # Use naive datetime for SQLite compatibility in tests
     dt = datetime(2023, 1, 1, 12, 0)
 
     existing = APIUsageRecord(
-        app_id=1,
+        app_id=dev_app_id,
         endpoint="/api/test",
         method="GET",
         minute_bucket=dt,
@@ -201,7 +249,7 @@ def test_sync_api_usage_existing_record(app):
 
     with patch("app.auth.utils.get_redis_client") as mock_get_redis:
         mock_redis = MagicMock()
-        key = f"usage:1:/api/test:GET:{dt.isoformat()}"
+        key = f"usage:{dev_app_id}:/api/test:GET:{dt.isoformat()}"
         mock_redis.keys.return_value = [key]
         # Ensure it returns a real dict so .get() works as expected
         usage_data = {"request_count": "5", "error_count": "1", "total_latency_ms": "300", "bytes_transferred": "1024"}
@@ -210,7 +258,7 @@ def test_sync_api_usage_existing_record(app):
 
         sync_api_usage()
 
-        record = db.session.query(APIUsageRecord).filter_by(app_id=1).first()
+        record = db.session.query(APIUsageRecord).filter_by(app_id=dev_app_id).first()
         assert record is not None
         assert record.request_count == 10
         assert record.error_count == 1

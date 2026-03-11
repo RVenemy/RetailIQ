@@ -8,13 +8,10 @@ We use StaticPool to force all SQLAlchemy connections (fixture sessions AND
 Flask request sessions) to share the exact same connection/DB instance.
 """
 
-import os
-
 import pytest
-from sqlalchemy import BigInteger, event
+from sqlalchemy import BigInteger
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 
@@ -90,6 +87,9 @@ def app():
 
     with test_app.app_context():
         Base.metadata.create_all(_db.engine)
+        with _db.engine.connect() as conn:
+            conn.execute(_db.text("PRAGMA foreign_keys = ON;"))
+            conn.commit()
         yield test_app
         _db.session.remove()
 
@@ -114,32 +114,33 @@ def client(app):
 
 @pytest.fixture(scope="function")
 def db_session(app):
-    """Create a new database session with a fresh transaction for each test."""
-    connection = _db.engine.connect()
-    transaction = connection.begin()
+    """Return the global Flask-SQLAlchemy session.
 
-    # Bind a NEW session to the transaction instead of reusing the global scoped session
-    TestSession = sessionmaker(bind=connection)
-    session = TestSession()
+    This is intentionally the SAME object that route handlers use via
+    ``db.session``, so fixtures and HTTP calls share one transaction
+    context on the single in-memory SQLite connection (StaticPool).
+    Cleanup is handled by the ``_clean_tables`` autouse fixture.
+    """
+    yield _db.session
 
-    # Begin a SAVEPOINT so that test-level commits don't persist past this fixture
-    session.begin_nested()
 
-    @event.listens_for(session, "after_transaction_end")
-    def restart_savepoint(sess, trans):  # pragma: no cover - fixture plumbing
-        # When the SAVEPOINT ends (via session.commit()), reopen it so subsequent
-        # operations remain sandboxed until the outer transaction rolls back.
-        if trans.nested and not trans._parent.nested:
-            sess.begin_nested()
+@pytest.fixture(autouse=True)
+def _clean_tables(app):
+    """Delete every row from every table after each test.
 
-    try:
-        yield session
-    finally:
-        # Remove the listener before tearing down to avoid cross-test leaks
-        event.remove(session, "after_transaction_end", restart_savepoint)
-        session.close()
-        transaction.rollback()
-        connection.close()
+    This is the simplest reliable isolation strategy for SQLite +
+    StaticPool (single physical connection).  SAVEPOINT tricks are
+    fragile here because StaticPool reuses one DBAPI connection.
+    """
+    yield
+    _db.session.rollback()
+    _db.session.remove()
+    with _db.engine.connect() as conn:
+        conn.execute(_db.text("PRAGMA foreign_keys = OFF;"))
+        for table in reversed(Base.metadata.sorted_tables):
+            conn.execute(_db.text(f"DELETE FROM {table.name};"))
+        conn.commit()
+        conn.execute(_db.text("PRAGMA foreign_keys = ON;"))
 
 
 # ---------------------------------------------------------------------------

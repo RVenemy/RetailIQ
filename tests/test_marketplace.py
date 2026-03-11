@@ -62,13 +62,26 @@ def test_create_order_missing_fields(client, owner_headers):
     assert rv.status_code == 422
 
 
-def test_create_order(client, owner_headers, app):
+def test_create_order(client, owner_headers, app, test_store):
     """Test creating a legitimate order."""
     # Setup: Create a SupplierProfile and CatalogItem manually
     with app.app_context():
         from app import db
+        from app.models.finance_models import LoanProduct
 
-        s = Supplier(store_id=1, name="Test Supplier")
+        # Seed a LoanProduct so the hardcoded product_id=1 in marketplace service is valid
+        lp = LoanProduct(
+            name="Term Loan",
+            product_type="TERM_LOAN",
+            min_amount=10,
+            max_amount=100000,
+            interest_rate_bps=1200,
+            max_term_days=365,
+        )
+        db.session.add(lp)
+        db.session.flush()
+
+        s = Supplier(store_id=test_store.store_id, name="Test Supplier")
         db.session.add(s)
         db.session.flush()
 
@@ -122,12 +135,12 @@ def test_recommendations(client, owner_headers):
     assert isinstance(data, list)
 
 
-def test_supplier_dashboard(client, owner_headers, app):
+def test_supplier_dashboard(client, owner_headers, app, test_store):
     """Test getting supplier dashboard."""
     with app.app_context():
         from app import db
 
-        s = Supplier(store_id=1, name="Dash Supplier")
+        s = Supplier(store_id=test_store.store_id, name="Dash Supplier")
         db.session.add(s)
         db.session.flush()
         sp = SupplierProfile(supplier_id=s.id, business_name="Dash Biz", business_type="MANUFACTURER")
@@ -142,12 +155,12 @@ def test_supplier_dashboard(client, owner_headers, app):
     assert "revenue" in data
 
 
-def test_supplier_catalog(client, owner_headers, app):
+def test_supplier_catalog(client, owner_headers, app, test_store):
     """Test fetching a supplier's catalog."""
     with app.app_context():
         from app import db
 
-        s = Supplier(store_id=1, name="Cat Supplier")
+        s = Supplier(store_id=test_store.store_id, name="Cat Supplier")
         db.session.add(s)
         db.session.flush()
         sp = SupplierProfile(supplier_id=s.id, business_name="Cat Biz", business_type="MANUFACTURER")

@@ -63,7 +63,12 @@ def test_snapshot_size_enforcement(app, test_store):
             )
             db.session.add(dss)
 
-        category_id = 1
+        from app.models import Category
+
+        cat = Category(store_id=store_id, name="Bulk Cat", gst_rate=0.0)
+        db.session.add(cat)
+        db.session.flush()
+        category_id = cat.category_id
         for i in range(500):
             p = Product(
                 store_id=store_id,

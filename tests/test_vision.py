@@ -63,14 +63,20 @@ from unittest.mock import patch
 
 from app import db
 from app.models import OcrJob, OcrJobItem, Product, StockAdjustment
-from app.tasks.tasks import process_ocr_job
+from app.tasks.tasks import process_ocr_job  # noqa: F401
+
+
+@pytest.fixture(autouse=True)
+def _fresh_session(app):
+    """Ensure session is clean before each vision DB test."""
+    db.session.rollback()
 
 
 @patch("app.vision.routes.process_ocr_job")
 def test_upload_valid_image_creates_job(mock_task, client, owner_headers):
     data = {"invoice_image": (io.BytesIO(b"fake image data"), "invoice.jpg")}
     res = client.post("/api/v1/vision/ocr/upload", headers=owner_headers, data=data, content_type="multipart/form-data")
-    assert res.status_code == 201
+    assert res.status_code == 201, f"Expected 201, got {res.status_code}: {res.data}"
     assert "job_id" in res.json
 
     # Check if job was created

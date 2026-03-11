@@ -4,9 +4,30 @@ from unittest.mock import patch
 
 import pytest
 
-from app.einvoicing.engine import BaseEInvoiceAdapter, get_einvoice_adapter, register_einvoice_adapter
+from app.einvoicing.engine import BaseEInvoiceAdapter, get_einvoice_adapter
 from app.models import Transaction
 from app.models.expansion_models import EInvoice
+
+
+@pytest.fixture(autouse=True)
+def seed_countries(app):
+    """Seed Country rows required by EInvoice FK on country_code."""
+    from app import db
+    from app.models.expansion_models import Country
+
+    for code, name, cur, loc, tz, tax in [
+        ("BR", "Brazil", "BRL", "pt-BR", "America/Sao_Paulo", "IVA"),
+        ("MX", "Mexico", "MXN", "es-MX", "America/Mexico_City", "IVA"),
+        ("ID", "Indonesia", "IDR", "id-ID", "Asia/Jakarta", "VAT"),
+    ]:
+        db.session.add(
+            Country(
+                code=code, name=name, default_currency=cur,
+                default_locale=loc, timezone=tz, tax_system=tax,
+            )
+        )
+    db.session.commit()
+    yield
 
 
 @pytest.fixture
@@ -102,8 +123,6 @@ def test_generate_einvoice_route_success(client, owner_headers, test_transaction
 
 
 def test_generate_einvoice_route_existing(client, owner_headers, test_transaction):
-    from app import db
-
     # First submit successfully
     client.post(
         "/api/v1/einvoice/generate",
@@ -162,12 +181,12 @@ def test_generate_einvoice_route_exception(client, owner_headers, test_transacti
         assert "SERVER_ERROR" in response.get_json()["error"]["code"]
 
 
-def test_get_einvoice_status_success(client, owner_headers, test_transaction):
+def test_get_einvoice_status_success(client, owner_headers, test_transaction, test_store):
     from app import db
 
     einvoice = EInvoice(
         transaction_id=test_transaction.transaction_id,
-        store_id=1,
+        store_id=test_store.store_id,
         country_code="BR",
         invoice_format="NF_E",
         xml_payload="<xml>",
