@@ -12,7 +12,7 @@
     "environment": [
       {"name": "SERVICE_ROLE", "value": "worker"}
     ],
-    "command": ["python3", "celery_worker.py", "worker", "--loglevel=info"],
+    "command": ["celery_worker.py"],
     "secrets": [
       {"name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:ap-south-1:610572473486:secret:retailiq/prod/db-url-6tuAb4"},
       {"name": "REDIS_URL", "valueFrom": "arn:aws:secretsmanager:ap-south-1:610572473486:secret:retailiq/prod/redis-url-BFxUxq"},
