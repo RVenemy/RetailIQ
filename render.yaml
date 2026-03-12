@@ -18,7 +18,7 @@ services:
           type: redis
           name: retailiq-redis
           property: connectionString
-      - key: CELERY_BROKER_URL # Explicitly required by the app
+      - key: CELERY_BROKER_URL
         fromService:
           type: redis
           name: retailiq-redis
@@ -36,7 +36,7 @@ services:
       - key: MAIL_PASSWORD
         sync: false
 
-  # 2. Celery Worker
+  # 2. Celery Worker (Background Worker)
   - type: worker
     name: retailiq-worker
     env: docker
@@ -67,6 +67,23 @@ services:
           type: web
           name: retailiq-api
           property: SECRET_KEY
+      - key: JWT_PRIVATE_KEY
+        fromService:
+          type: web
+          name: retailiq-api
+          property: JWT_PRIVATE_KEY
+      - key: JWT_PUBLIC_KEY
+        fromService:
+          type: web
+          name: retailiq-api
+          property: JWT_PUBLIC_KEY
+
+  # 3. Managed Redis
+  - type: redis
+    name: retailiq-redis
+    region: singapore
+    plan: free
+    ipAllowList: [] # Only allow internal Render traffic
 
 # Managed Postgres
 databases:
@@ -75,10 +92,3 @@ databases:
     user: retailiq
     region: singapore
     plan: free
-
-# Managed Redis
-redis:
-  - name: retailiq-redis
-    region: singapore
-    plan: free
-    ipAllowList: [] # Only allow internal Render traffic
