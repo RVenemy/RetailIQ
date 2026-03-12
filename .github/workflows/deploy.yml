@@ -41,6 +41,8 @@ jobs:
     name: 🚀 Render Blueprint Deploy
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      RENDER_NOTIFY_WEBHOOK: ${{ secrets.RENDER_NOTIFY_WEBHOOK || '' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -101,9 +103,9 @@ jobs:
           fi
 
       - name: Notify webhook (optional)
-        if: success() && secrets.RENDER_NOTIFY_WEBHOOK != ''
+        if: success() && env.RENDER_NOTIFY_WEBHOOK != ''
         env:
-          WEBHOOK_URL: ${{ secrets.RENDER_NOTIFY_WEBHOOK }}
+          WEBHOOK_URL: ${{ env.RENDER_NOTIFY_WEBHOOK }}
           DEPLOY_ID: ${{ steps.trigger.outputs.deploy_id }}
           DEPLOY_STATUS: ${{ steps.trigger.outputs.deploy_status }}
         run: |
