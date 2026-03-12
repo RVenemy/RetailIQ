@@ -1,3 +1,17 @@
+envVarGroups:
+  - name: retailiq-shared-secrets
+    envVars:
+      - key: SECRET_KEY
+        sync: false
+      - key: JWT_PRIVATE_KEY
+        sync: false
+      - key: JWT_PUBLIC_KEY
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+
 services:
   # 1. API Web Service
   - type: web
@@ -8,6 +22,8 @@ services:
     plan: free
     region: singapore # Closest to ap-south-1
     healthCheckPath: /api/v1/health
+    envVarGroups:
+      - retailiq-shared-secrets
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -25,16 +41,6 @@ services:
           property: connectionString
       - key: FLASK_ENV
         value: production
-      - key: SECRET_KEY
-        generateValue: true
-      - key: JWT_PRIVATE_KEY
-        sync: false
-      - key: JWT_PUBLIC_KEY
-        sync: false
-      - key: MAIL_USERNAME
-        sync: false
-      - key: MAIL_PASSWORD
-        sync: false
 
   # 2. Celery Worker (Background Worker)
   - type: worker
@@ -44,7 +50,9 @@ services:
     dockerfilePath: Dockerfile
     plan: free
     region: singapore
-    startCommand: celery -A celery_worker.celery_app worker --loglevel=info
+    dockerCommand: celery -A celery_worker.celery_app worker --loglevel=info
+    envVarGroups:
+      - retailiq-shared-secrets
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -62,21 +70,6 @@ services:
           property: connectionString
       - key: FLASK_ENV
         value: production
-      - key: SECRET_KEY
-        fromService:
-          type: web
-          name: retailiq-api
-          property: SECRET_KEY
-      - key: JWT_PRIVATE_KEY
-        fromService:
-          type: web
-          name: retailiq-api
-          property: JWT_PRIVATE_KEY
-      - key: JWT_PUBLIC_KEY
-        fromService:
-          type: web
-          name: retailiq-api
-          property: JWT_PUBLIC_KEY
 
   # 3. Managed Redis
   - type: redis
