@@ -1,11 +1,8 @@
 # RetailIQ — Production Deployment Guide
 
-> **Platforms**: AWS ECS Fargate (Standard) | Render (Fast-Track)
-> **Last Updated**: March 2026
-
 RetailIQ supports two primary deployment tracks:
 1. **AWS ECS Fargate**: The standard path for enterprise scale, security hardening, and Multi-AZ resilience.
-2. **Render**: A blueprint-driven path for rapid deployment and mid-scale operations.
+2. **Railway**: The optimized path for rapid deployment and cost-efficient scaling.
 
 ---
 
