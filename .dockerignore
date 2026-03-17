@@ -69,13 +69,13 @@ logs/
 docs/
 
 # Large model files and binaries
-*.pt
-*.pth
-*.onnx
-*.pb
-*.h5
-*.pkl
-*.pickle
+# Included for AI Vision (Phase 2)
+# *.pt
+# *.pth
+# *.onnx
+# *.pb
+# *.pkl
+# *.pickle
 
 # Test files
 test_*.py
@@ -83,7 +83,7 @@ test_*.py
 tests/
 
 # Scripts
-scripts/
+# scripts/
 fetch_logs.py
 test_*.py
 generate_*.py
