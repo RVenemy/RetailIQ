@@ -22,8 +22,8 @@ SMTP_PORT = 587
 
 def _get_mail_config():
     """Return (username, password) or (None, None) if not configured."""
-    username = current_app.config.get("MAIL_USERNAME") or ""
-    password = current_app.config.get("MAIL_PASSWORD") or ""
+    username = current_app.config.get("SMTP_USER") or ""
+    password = current_app.config.get("SMTP_PASSWORD") or ""
     if username and password:
         return username, password
     return None, None
@@ -48,8 +48,11 @@ def _send_raw(to_email, subject, html_body):
     msg["Subject"] = subject
     msg.attach(MIMEText(html_body, "html"))
 
+    host = current_app.config.get("SMTP_HOST", "smtp.gmail.com")
+    port = int(current_app.config.get("SMTP_PORT", 587))
+
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+        with smtplib.SMTP(host, port, timeout=15) as server:
             server.ehlo()
             server.starttls()
             server.ehlo()
