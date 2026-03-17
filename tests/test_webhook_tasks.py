@@ -157,7 +157,7 @@ def test_deliver_webhook_request_exception(app, test_app_and_event):
 
 
 def test_sync_api_usage_no_keys():
-    with patch("app.auth.utils.get_redis_client") as mock_get_redis:
+    with patch("app.tasks.webhook_tasks.get_redis_client") as mock_get_redis:
         mock_redis = MagicMock()
         mock_redis.keys.return_value = []
         mock_get_redis.return_value = mock_redis

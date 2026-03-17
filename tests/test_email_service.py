@@ -40,17 +40,19 @@ class FakeRedis:
 
 
 def test_send_otp_email_dev_fallback(app):
-    """When MAIL_USERNAME is empty, OTP email falls back to logger (no SMTP)."""
-    # Default test config has no MAIL_USERNAME
+    """When email is disabled, OTP email falls back to logger (no SMTP)."""
+    # Ensure fallback by disabling email or clearing credentials
+    app.config["EMAIL_ENABLED"] = False
     with app.app_context():
         from app.email import send_otp_email
 
         result = send_otp_email("user@example.com", "123456")
-        assert result is True  # dev fallback always succeeds
+        assert result is True  # dev/disabled fallback always succeeds
 
 
 def test_send_password_reset_email_dev_fallback(app):
-    """When MAIL_USERNAME is empty, password reset email falls back to logger."""
+    """When email is disabled, password reset email falls back to logger."""
+    app.config["EMAIL_ENABLED"] = False
     with app.app_context():
         from app.email import send_password_reset_email
 
@@ -60,9 +62,10 @@ def test_send_password_reset_email_dev_fallback(app):
 
 @patch("app.email.smtplib.SMTP")
 def test_send_otp_email_via_smtp(mock_smtp_class, app):
-    """With MAIL config set, OTP email goes through SMTP."""
-    app.config["MAIL_USERNAME"] = "test@gmail.com"
-    app.config["MAIL_PASSWORD"] = "test-app-password"
+    """With SMTP config set, OTP email goes through SMTP."""
+    app.config["EMAIL_ENABLED"] = True
+    app.config["SMTP_USER"] = "test@gmail.com"
+    app.config["SMTP_PASSWORD"] = "test-app-password"
 
     mock_server = MagicMock()
     mock_smtp_class.return_value.__enter__ = MagicMock(return_value=mock_server)
@@ -79,15 +82,16 @@ def test_send_otp_email_via_smtp(mock_smtp_class, app):
     mock_server.sendmail.assert_called_once()
 
     # Clean up
-    app.config["MAIL_USERNAME"] = ""
-    app.config["MAIL_PASSWORD"] = ""
+    app.config["SMTP_USER"] = ""
+    app.config["SMTP_PASSWORD"] = ""
 
 
 @patch("app.email.smtplib.SMTP")
 def test_send_password_reset_email_via_smtp(mock_smtp_class, app):
-    """With MAIL config set, password reset email goes through SMTP."""
-    app.config["MAIL_USERNAME"] = "test@gmail.com"
-    app.config["MAIL_PASSWORD"] = "test-app-password"
+    """With SMTP config set, password reset email goes through SMTP."""
+    app.config["EMAIL_ENABLED"] = True
+    app.config["SMTP_USER"] = "test@gmail.com"
+    app.config["SMTP_PASSWORD"] = "test-app-password"
 
     mock_server = MagicMock()
     mock_smtp_class.return_value.__enter__ = MagicMock(return_value=mock_server)
@@ -101,15 +105,16 @@ def test_send_password_reset_email_via_smtp(mock_smtp_class, app):
 
     mock_server.sendmail.assert_called_once()
 
-    app.config["MAIL_USERNAME"] = ""
-    app.config["MAIL_PASSWORD"] = ""
+    app.config["SMTP_USER"] = ""
+    app.config["SMTP_PASSWORD"] = ""
 
 
 @patch("app.email.smtplib.SMTP")
 def test_smtp_failure_returns_false(mock_smtp_class, app):
     """If SMTP raises, send returns False (doesn't crash the request)."""
-    app.config["MAIL_USERNAME"] = "test@gmail.com"
-    app.config["MAIL_PASSWORD"] = "test-app-password"
+    app.config["EMAIL_ENABLED"] = True
+    app.config["SMTP_USER"] = "test@gmail.com"
+    app.config["SMTP_PASSWORD"] = "test-app-password"
 
     mock_smtp_class.side_effect = Exception("Connection refused")
 
@@ -119,8 +124,8 @@ def test_smtp_failure_returns_false(mock_smtp_class, app):
         result = send_otp_email("user@example.com", "111111")
         assert result is False
 
-    app.config["MAIL_USERNAME"] = ""
-    app.config["MAIL_PASSWORD"] = ""
+    app.config["SMTP_USER"] = ""
+    app.config["SMTP_PASSWORD"] = ""
 
 
 # ─── Integration tests: registration + OTP email ────────────────────────────
