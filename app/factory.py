@@ -54,14 +54,27 @@ def create_app(config_object=None):
         db.init_app(app)
 
         # Rate limiter — use Redis if available, fall back to memory
+        # We explicitly exclude "memory://" from truthy checks to force fallback if REDIS_URL exists
+        config_url = app.config.get("RATELIMIT_STORAGE_URL")
         redis_url = (
-            app.config.get("RATELIMIT_STORAGE_URL")
+            (config_url if config_url and config_url != "memory://" else None)
             or app.config.get("REDIS_URL")
             or os.environ.get("REDIS_URL")
             or os.environ.get("CELERY_BROKER_URL")
             or "memory://"
         )
+
+        # Debug logging for production (masking credentials)
+        if app.config.get("ENVIRONMENT") == "production":
+            masked_url = redis_url
+            if "@" in redis_url:
+                prefix = redis_url.split("@")[0].split("//")[0] + "//"
+                suffix = redis_url.split("@")[1]
+                masked_url = f"{prefix}****:****@{suffix}"
+            app.logger.info(f"Resolved RATELIMIT_STORAGE_URL: {masked_url}")
+
         app.config["RATELIMIT_STORAGE_URL"] = redis_url
+        app.config["RATELIMIT_STORAGE_URI"] = redis_url
         limiter.init_app(app)
 
         CORS(app, resources={r"/api/*": {"origins": app.config.get("CORS_ORIGINS", "*")}})

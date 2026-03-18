@@ -226,9 +226,12 @@ The system is pre-configured for Railway using `Dockerfile.railway` and `railway
 
 #### **Crucial: Updating Resources**
 If you create new Database or Redis instances in Railway, you **must** update the following environment variables in the **App Service** dashboard:
-1. `DATABASE_URL`: Ensure it points to the new Postgres instance.
-2. `REDIS_URL`: Ensure it points to the new Redis instance.
-3. `SECRET_KEY`: Must be a long, random string.
+1. `DATABASE_URL`: Set to `${{Postgres.DATABASE_URL}}` (or similar depending on service name).
+2. `REDIS_URL`: Set to `${{Redis.REDIS_URL}}`. **Do not use `${{Redis.DATABASE_URL}}` for Redis.**
+3. `CELERY_BROKER_URL`: Set to `${{REDIS_URL}}/1`. Ensure the prefix is not empty.
+
+> [!WARNING]
+> If a variable resolves to just `/1` (e.g. if the prefix variable is empty), Celery will fail with `ModuleNotFoundError: No module named '/1'`. Always verify the base URL is populated.
 
 #### **Health Checks**
 The `Dockerfile.railway` includes a health check hitting `/health`. If the app crashes, check the logs for `ModuleNotFoundError` or `OOM` (Out of Memory). Currently optimized to run on 512MB RAM.
