@@ -54,8 +54,14 @@ def create_app(config_object=None):
         db.init_app(app)
 
         # Rate limiter — use Redis if available, fall back to memory
-        redis_url = app.config.get("REDIS_URL", "memory://")
-        app.config.setdefault("RATELIMIT_STORAGE_URL", redis_url)
+        redis_url = (
+            app.config.get("RATELIMIT_STORAGE_URL")
+            or app.config.get("REDIS_URL")
+            or os.environ.get("REDIS_URL")
+            or os.environ.get("CELERY_BROKER_URL")
+            or "memory://"
+        )
+        app.config["RATELIMIT_STORAGE_URL"] = redis_url
         limiter.init_app(app)
 
         CORS(app, resources={r"/api/*": {"origins": app.config.get("CORS_ORIGINS", "*")}})

@@ -14,7 +14,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://retailiq:retailiq@postgres:5432/retailiq
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
     depends_on:
@@ -59,7 +59,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://retailiq:retailiq@postgres:5432/retailiq
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
     depends_on:
@@ -82,7 +82,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://retailiq:retailiq@postgres:5432/retailiq
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
     depends_on:

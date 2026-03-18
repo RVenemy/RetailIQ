@@ -25,6 +25,42 @@ RetailIQ is a comprehensive, production-hardened retail operating system designe
 
 ## 🏗 System Architecture (Core Engine v1.0)
 
+RetailIQ is a **resilient, distributed retail operating system** designed for high-availability. It uses a **multi-process topology** to separate API requests, background task processing, and scheduling.
+
+### 1. Topology & Components
+- **API Gateway (Gunicorn)**: Multi-threaded WSGI server (Gthread) handling REST requests.
+- **Task Worker (Celery)**: Background processor for heavy ML (Prophet), OCR, and webhooks.
+- **Task Broker (Redis)**: Message queue and rate-limiting storage.
+- **Persistence (PostgreSQL)**: Relational storage with strict foreign keys and `Decimal` precision.
+- **Schedule (Celery Beat)**: Periodic job scheduler for daily aggregates and alerts.
+
+### 2. Implementation Logic
+```mermaid
+graph TD
+    subgraph Container [Railway Combined Mode]
+        G[Gunicorn API]
+        CW[Celery Worker]
+        CB[Celery Beat]
+    end
+
+    subgraph Data [Cloud Services]
+        DB[(Postgres)]
+        RD[(Redis)]
+    end
+
+    G --> DB
+    G --> RD
+    CW --> DB
+    CW --> RD
+```
+
+### 3. Resilience Patterns
+- **Lazy Module Initialization**: Heavy libraries like `numpy` and `prophet` are imported only inside the specific functions that require them. This allows the API to start in under 2 seconds, satisfying Railway's health checks even while large models are loading in the background.
+- **Automated URI Normalization**: The application factory handles legacy database prefixes (e.g., `postgres://` to `postgresql://`) automatically.
+
+---
+
+
 The system follows a high-resilience, event-driven architecture designed for enterprise-grade reliability.
 
 ```mermaid
@@ -165,7 +201,40 @@ Application factory. Initializes Flask, SQLAlchemy, Limiter, and registers 30+ b
 
 ---
 
-## 🛠 Developer Guide
+## 🛠 Developer & Engineer Guide
+
+### 1. Local Development
+#### Prerequisites
+- Python 3.10+
+- PostgreSQL 14+
+- Redis (Local or Docker)
+
+#### Setup
+1. `pip install -r requirements.txt`
+2. Create `.env` from `.env.example`
+3. `flask db upgrade`
+4. `python run.py` (API) / `celery -A celery_worker.celery_app worker` (Worker)
+
+### 2. Docker Setup
+```bash
+docker compose build --no-cache
+docker compose up -d
+```
+
+### 3. Railway Cloud Deployment
+The system is pre-configured for Railway using `Dockerfile.railway` and `railway.toml`.
+
+#### **Crucial: Updating Resources**
+If you create new Database or Redis instances in Railway, you **must** update the following environment variables in the **App Service** dashboard:
+1. `DATABASE_URL`: Ensure it points to the new Postgres instance.
+2. `REDIS_URL`: Ensure it points to the new Redis instance.
+3. `SECRET_KEY`: Must be a long, random string.
+
+#### **Health Checks**
+The `Dockerfile.railway` includes a health check hitting `/health`. If the app crashes, check the logs for `ModuleNotFoundError` or `OOM` (Out of Memory). Currently optimized to run on 512MB RAM.
+
+---
+
 
 ### Prerequisites
 - Python 3.10+

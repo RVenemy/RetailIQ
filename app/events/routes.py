@@ -6,7 +6,6 @@ from sqlalchemy import and_, or_, text
 from .. import db
 from ..auth.decorators import require_auth
 from ..auth.utils import format_response
-from ..forecasting.engine import generate_demand_forecast
 from ..models import BusinessEvent, Product
 from . import events_bp
 
@@ -221,7 +220,9 @@ def demand_sensing(product_id):
         return format_response(success=False, error={"code": "NOT_FOUND", "message": "Product not found"}), 404
 
     try:
-        # Call forecasting engine (to be implemented in engine.py)
+        # Call forecasting engine (lazy import to prevent startup crash if numpy/prophet missing)
+        from ..forecasting.engine import generate_demand_forecast
+
         result = generate_demand_forecast(store_id, product_id, db.session, horizon=14)
         return format_response(data=result)
     except Exception as e:
