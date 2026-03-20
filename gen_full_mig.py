@@ -129,7 +129,7 @@ def gen_create_table(table_name):
             continue  # already in columns
         if isinstance(const, sa.UniqueConstraint):
             cols = [repr(c.name) for c in const.columns]
-            lines.append(f'        sa.UniqueConstraint({", ".join(cols)}, name={repr(const.name)}),')
+            lines.append(f"        sa.UniqueConstraint({', '.join(cols)}, name={repr(const.name)}),")
         if isinstance(const, sa.CheckConstraint):
             lines.append(f"        sa.CheckConstraint({repr(str(const.sqltext))}, name={repr(const.name)}),")
 
@@ -148,7 +148,7 @@ def main():
     print("")
     print("Revision ID: 121021f2b187")
     print("Revises: 7f8e9a0b1c2d")
-    print(f'Create Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
+    print(f"Create Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("")
     print('"""')
     print("from typing import Sequence, Union")

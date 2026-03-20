@@ -270,7 +270,7 @@ class TestContributionEndpoint:
             p = Product(
                 store_id=test_store.store_id,
                 category_id=test_category.category_id,
-                name=f"Product {i+2}",
+                name=f"Product {i + 2}",
                 selling_price=50.0,
                 cost_price=25.0,
             )

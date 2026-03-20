@@ -152,7 +152,7 @@ def delete_category(category_id):
     if product_count > 0:
         return standard_json(
             success=False,
-            message=("Cannot delete category with assigned products. " "Please reassign or delete products first."),
+            message=("Cannot delete category with assigned products. Please reassign or delete products first."),
             status_code=422,
         )
 

@@ -767,7 +767,7 @@ def _generate_insight_cards(kpis: dict, rev7d: list, alerts: dict) -> list[dict]
             {
                 "type": "positive",
                 "title": "Revenue above trend",
-                "body": f"Today's revenue ({rev_today:.0f}) is {((rev_today/ma-1)*100):.1f}% above the 7-day average.",
+                "body": f"Today's revenue ({rev_today:.0f}) is {((rev_today / ma - 1) * 100):.1f}% above the 7-day average.",
             }
         )
     elif ma and rev_today < 0.8 * ma:
@@ -775,7 +775,7 @@ def _generate_insight_cards(kpis: dict, rev7d: list, alerts: dict) -> list[dict]
             {
                 "type": "warning",
                 "title": "Revenue below trend",
-                "body": f"Today's revenue ({rev_today:.0f}) is {((1-rev_today/ma)*100):.1f}% below the 7-day average.",
+                "body": f"Today's revenue ({rev_today:.0f}) is {((1 - rev_today / ma) * 100):.1f}% below the 7-day average.",
             }
         )
 
@@ -792,7 +792,7 @@ def _generate_insight_cards(kpis: dict, rev7d: list, alerts: dict) -> list[dict]
         cards.append(
             {
                 "type": "alert",
-                "title": f'{critical} critical alert{"s" if critical > 1 else ""}',
+                "title": f"{critical} critical alert{'s' if critical > 1 else ''}",
                 "body": "Action required: review your open alerts dashboard.",
             }
         )
