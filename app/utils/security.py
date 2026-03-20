@@ -72,7 +72,11 @@ def encrypt_pii(plaintext: str) -> str:
         from cryptography.fernet import Fernet
         from flask import current_app, has_app_context
 
-        secret = current_app.config.get("SECRET_KEY", "dev-secret-key-12345") if has_app_context() else "dev-secret-key-12345"
+        secret = (
+            current_app.config.get("SECRET_KEY", "dev-secret-key-12345")
+            if has_app_context()
+            else "dev-secret-key-12345"
+        )
         key = urlsafe_b64encode(sha256(secret.encode("utf-8")).digest())
         token = Fernet(key).encrypt(plaintext.encode("utf-8")).decode("ascii")
         return f"ENC2:{token}"
@@ -97,7 +101,11 @@ def decrypt_pii(encrypted: str) -> str:
         from cryptography.fernet import Fernet, InvalidToken
         from flask import current_app, has_app_context
 
-        secret = current_app.config.get("SECRET_KEY", "dev-secret-key-12345") if has_app_context() else "dev-secret-key-12345"
+        secret = (
+            current_app.config.get("SECRET_KEY", "dev-secret-key-12345")
+            if has_app_context()
+            else "dev-secret-key-12345"
+        )
         key = urlsafe_b64encode(sha256(secret.encode("utf-8")).digest())
 
         if encrypted.startswith("ENC2:"):

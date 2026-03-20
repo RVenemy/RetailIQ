@@ -106,7 +106,9 @@ def run_forecast(dates: list[date], vals: list[float], horizon: int) -> Forecast
             if prophet_points:
                 model_type = "prophet"
                 points = [
-                    pt if isinstance(pt, ForecastPoint) else ForecastPoint(
+                    pt
+                    if isinstance(pt, ForecastPoint)
+                    else ForecastPoint(
                         forecast_date=getattr(pt, "forecast_date", dates[-1] + timedelta(days=idx + 1)),
                         forecast_mean=max(0.0, float(getattr(pt, "forecast_mean", getattr(pt, "yhat", 0.0)))),
                         lower_bound=max(0.0, float(getattr(pt, "lower_bound", getattr(pt, "yhat_lower", 0.0)))),

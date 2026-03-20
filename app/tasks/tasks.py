@@ -232,7 +232,9 @@ def detect_slow_movers(store_id: int | None = None, threshold: float = 0.5):
 
     with task_session() as session:
         if store_id is None:
-            store_ids = [row[0] for row in session.query(Product.store_id).filter(Product.store_id.is_not(None)).distinct().all()]
+            store_ids = [
+                row[0] for row in session.query(Product.store_id).filter(Product.store_id.is_not(None)).distinct().all()
+            ]
         else:
             store_ids = [store_id]
 
@@ -397,7 +399,9 @@ def recalculate_optimal_pricing(store_id: int | None = None, session=None):
 
     def _run(sess):
         if store_id is None:
-            store_ids = [row[0] for row in sess.query(Product.store_id).filter(Product.store_id.is_not(None)).distinct().all()]
+            store_ids = [
+                row[0] for row in sess.query(Product.store_id).filter(Product.store_id.is_not(None)).distinct().all()
+            ]
         else:
             store_ids = [store_id]
 
@@ -662,7 +666,9 @@ def sync_inventory_to_cloud(store_id: int | None = None, session=None):
 
     def _run(sess):
         if store_id is None:
-            store_ids = [row[0] for row in sess.query(Product.store_id).filter(Product.store_id.is_not(None)).distinct().all()]
+            store_ids = [
+                row[0] for row in sess.query(Product.store_id).filter(Product.store_id.is_not(None)).distinct().all()
+            ]
         else:
             store_ids = [store_id]
 
@@ -703,12 +709,7 @@ def run_compliance_scan(store_id: int | None = None, session=None):
         results = []
         for sid in store_ids:
             config = sess.query(StoreGSTConfig).filter_by(store_id=sid).first()
-            filing = (
-                sess.query(GSTFilingPeriod)
-                .filter_by(store_id=sid)
-                .order_by(GSTFilingPeriod.period.desc())
-                .first()
-            )
+            filing = sess.query(GSTFilingPeriod).filter_by(store_id=sid).order_by(GSTFilingPeriod.period.desc()).first()
             issues = []
             if not config or not config.is_gst_enabled:
                 issues.append("GST_NOT_ENABLED")
@@ -730,7 +731,9 @@ def run_compliance_scan(store_id: int | None = None, session=None):
             )
 
         logger.info("Compliance scan generated: %s", results)
-        return results if store_id is None else (results[0] if results else {"store_id": store_id, "issues": ["NO_DATA"]})
+        return (
+            results if store_id is None else (results[0] if results else {"store_id": store_id, "issues": ["NO_DATA"]})
+        )
 
     if session:
         return _run(session)
