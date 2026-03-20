@@ -1,0 +1,35 @@
+FROM python:3.10-slim
+
+# ── System dependencies ───────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    build-essential \
+    libpq-dev \
+    curl \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# ── Create non-root user BEFORE installing packages ───────────────────────────
+# pip installs go into system site-packages (root-owned) — zero recursive chown.
+RUN useradd --create-home --shell /bin/bash --uid 1001 app
+
+WORKDIR /app
+
+# ── Python dependencies ───────────────────────────────────────────────────────
+RUN pip install --no-cache-dir --upgrade pip
+
+# Core deps only — no heavy ML libs on Railway Free Tier
+COPY requirements-core.txt requirements-core.txt
+RUN pip install --no-cache-dir -r requirements-core.txt
+
+# ── Application source — app-owned at copy time ───────────────────────────────
+COPY --chown=app:app . .
+
+USER app
+
+EXPOSE $PORT
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-5000}/health || exit 1
+
+# Railway injects $PORT — process orchestration handled by combined script
+CMD ["bash", "scripts/start_combined.sh"]

@@ -1,0 +1,42 @@
+{
+  "family": "retailiq-beat",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::610572473486:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::610572473486:role/retailiq-task-role",
+  "containerDefinitions": [{
+    "name": "retailiq-beat",
+    "image": "610572473486.dkr.ecr.us-east-1.amazonaws.com/retailiq:latest",
+    "environment": [
+      {"name": "SERVICE_ROLE", "value": "beat"}
+    ],
+    "secrets": [
+      {"name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:us-east-1:610572473486:secret:retailiq/prod/db-url-UZwgrs"},
+      {"name": "REDIS_URL", "valueFrom": "arn:aws:secretsmanager:us-east-1:610572473486:secret:retailiq/prod/redis-url-h6dZNR"},
+      {"name": "CELERY_BROKER_URL", "valueFrom": "arn:aws:secretsmanager:us-east-1:610572473486:secret:retailiq/prod/celery-broker-url-fkqB00"},
+      {"name": "SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:us-east-1:610572473486:secret:retailiq/prod/secret-key-pZqYnJ"},
+      {"name": "JWT_PRIVATE_KEY", "valueFrom": "arn:aws:secretsmanager:us-east-1:610572473486:secret:retailiq/prod/jwt-private-IeuEAW"},
+      {"name": "JWT_PUBLIC_KEY", "valueFrom": "arn:aws:secretsmanager:us-east-1:610572473486:secret:retailiq/prod/jwt-public-FY3L89"},
+      {"name": "MAIL_USERNAME", "valueFrom": "arn:aws:secretsmanager:us-east-1:610572473486:secret:retailiq/prod/mail-username-LgXy28"},
+      {"name": "MAIL_PASSWORD", "valueFrom": "arn:aws:secretsmanager:us-east-1:610572473486:secret:retailiq/prod/mail-password-owS9a5"}
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/ecs/retailiq-beat",
+        "awslogs-region": "us-east-1",
+        "awslogs-stream-prefix": "beat"
+      }
+    },
+    "essential": true,
+    "healthCheck": {
+      "command": ["python3", "-c", "import sys; sys.exit(0)"],
+      "interval": 30,
+      "timeout": 5,
+      "retries": 3,
+      "startPeriod": 60
+    },
+  }]
+}

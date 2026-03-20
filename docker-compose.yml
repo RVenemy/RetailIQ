@@ -1,0 +1,97 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - retailiq-backend:latest
+    image: retailiq-backend:latest
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+      - pip-cache:/root/.cache/pip
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command:
+      - sh
+      - -c
+      - python scripts/wait_for_db.py && alembic upgrade head && exec gunicorn --bind 0.0.0.0:5000 wsgi:app
+
+  postgres:
+    image: postgres:15
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-retailiq} -d ${POSTGRES_DB:-retailiq}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - retailiq-backend:latest
+    image: retailiq-backend:latest
+    volumes:
+      - .:/app
+      - pip-cache:/root/.cache/pip
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: celery -A celery_worker.celery_app worker -l info
+
+  beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - retailiq-backend:latest
+    image: retailiq-backend:latest
+    volumes:
+      - .:/app
+      - pip-cache:/root/.cache/pip
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: celery -A celery_worker.celery_app beat -l info --schedule /tmp/celerybeat-schedule
+
+volumes:
+  postgres_data:
+  pip-cache:

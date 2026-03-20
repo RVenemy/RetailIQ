@@ -1,0 +1,48 @@
+[
+  {
+    "AlarmName": "retailiq-api-5xx-errors",
+    "AlarmDescription": "Triggers when ALB sees more than 10 5xx errors per minute for 3 minutes",
+    "MetricName": "HTTPCode_Target_5XX_Count",
+    "Namespace": "AWS/ApplicationELB",
+    "Statistic": "Sum",
+    "Period": 60,
+    "EvaluationPeriods": 3,
+    "Threshold": 10,
+    "ComparisonOperator": "GreaterThanThreshold",
+    "TreatMissingData": "notBreaching"
+  },
+  {
+    "AlarmName": "retailiq-alb-unhealthy-hosts",
+    "AlarmDescription": "Triggers when healthy API tasks drop below 2",
+    "MetricName": "UnHealthyHostCount",
+    "Namespace": "AWS/ApplicationELB",
+    "Statistic": "Maximum",
+    "Period": 60,
+    "EvaluationPeriods": 1,
+    "Threshold": 1,
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "TreatMissingData": "breaching"
+  },
+  {
+    "AlarmName": "retailiq-api-high-cpu",
+    "AlarmDescription": "Triggers when API CPU exceeds 80% for 5 minutes",
+    "MetricName": "CPUUtilization",
+    "Namespace": "AWS/ECS",
+    "Dimensions": [
+      {
+        "Name": "ClusterName",
+        "Value": "retailiq-prod"
+      },
+      {
+        "Name": "ServiceName",
+        "Value": "retailiq-api"
+      }
+    ],
+    "Statistic": "Average",
+    "Period": 60,
+    "EvaluationPeriods": 5,
+    "Threshold": 80,
+    "ComparisonOperator": "GreaterThanThreshold",
+    "TreatMissingData": "notBreaching"
+  }
+]

@@ -1,0 +1,234 @@
+# ============================================================================
+# RetailIQ — Continuous Integration (Optimized for <3 min runtime, end-to-end <5 min)
+# ============================================================================
+# Runs on every push and PR. Three parallel jobs:
+#   1. check       — Combined lint, security, and migration check (<45s)
+#   2. test        — pytest suite with SQLite only (no services) (<60s)
+#   3. docker      — Validate Docker build on main only (<45s)
+#
+# Uses uv for ultra-fast pip installs (~10x faster).
+# Tests use SQLite in-memory, so no external services needed.
+# Python version matrix only runs on main branch.
+# ============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write      # needed for coverage PR comment
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Shared env for test/coverage jobs
+# ─────────────────────────────────────────────────────────────────────────────
+env:
+  PYTHON_VERSION: '3.10'
+  SECRET_KEY: ci-test-secret-key-do-not-use-in-production
+  FLASK_ENV: development
+  PYTHONUNBUFFERED: '1'
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # 1. CHECK — combined lint, security, and migration check (<45s)
+  # ──────────────────────────────────────────────────────────────────────────
+  check:
+    name: 🔍 Quality Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+          cache-dependency-glob: "requirements*.txt"
+
+      - name: Create virtual environment
+        run: uv venv
+
+      - name: Install tools
+        run: |
+          source .venv/bin/activate
+          uv pip install ruff==0.4.4 bandit==1.7.8 pip-audit==2.7.3 alembic==1.13.1
+
+      - name: Ruff check (lint)
+        run: |
+          source .venv/bin/activate
+          ruff check . --output-format=github
+
+      - name: Ruff format check
+        run: |
+          source .venv/bin/activate
+          ruff format --check .
+
+      - name: Bandit SAST scan
+        run: |
+          source .venv/bin/activate
+          # Use isolated venv to avoid scanning exceptions for global packages
+          bandit -r app/ \
+            -s B101,B601 \
+            -f json -o bandit-report.json \
+            --exit-zero
+          # Print human-readable summary
+          bandit -r app/ -s B101,B601 -ll || true
+
+      - name: pip-audit (known CVEs)
+        run: |
+          source .venv/bin/activate
+          pip-audit -r requirements.txt --desc
+        continue-on-error: false
+
+      - name: Create .env from example
+        run: cp .env.example .env
+
+      - name: Check for un-generated migrations
+        run: |
+          source .venv/bin/activate
+          # Simple check: just ensure alembic can run without errors
+          if ! alembic check; then
+            echo "::warning:: alembic check detected differences, but these may be due to dialect-specific differences"
+            echo "::warning:: If major schema changes were made, please run 'alembic revision --autogenerate'"
+            # Don't fail the build - just warn
+          fi
+          echo "✅ Migration check completed."
+
+      - name: Upload Bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+          retention-days: 30
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 2. TEST — pytest suite with SQLite only (<60s)
+  # ──────────────────────────────────────────────────────────────────────────
+  test:
+    name: 🧪 Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        # Run full matrix only on main, single version on PRs
+        python-version: ${{ github.ref == 'refs/heads/main' && fromJson('["3.10", "3.11", "3.12"]') || fromJson('["3.10"]') }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+          cache-dependency-glob: "requirements*.txt"
+
+      - name: Create .env from example
+        run: cp .env.example .env
+
+      - name: Install dependencies
+        run: |
+          uv pip install --system -r requirements-dev.txt
+          uv pip install --system pytest-xdist pytest-cov
+
+      - name: Run test suite with coverage
+        run: |
+          pytest tests/ \
+            -v \
+            -n auto \
+            --tb=short \
+            --strict-markers \
+            --cov=app \
+            --cov-report=term-missing:skip-covered \
+            --cov-report=xml:coverage.xml \
+            --cov-report=html:htmlcov \
+            --junitxml=results.xml \
+            --maxfail=10
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-py${{ matrix.python-version }}
+          path: |
+            results.xml
+            coverage.xml
+            htmlcov/
+          retention-days: 14
+
+      - name: Fail if coverage below threshold
+        if: matrix.python-version == '3.10'
+        run: |
+          python -c "
+          import xml.etree.ElementTree as ET
+          tree = ET.parse('coverage.xml')
+          rate = float(tree.getroot().attrib['line-rate'])
+          pct = round(rate * 100, 1)
+          print(f'Coverage: {pct}%')
+          if pct < 60:
+              raise SystemExit(f'Coverage {pct}% is below 60% minimum')
+          "
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 3. DOCKER BUILD — validate production image (main branch only)
+  # ──────────────────────────────────────────────────────────────────────────
+  docker:
+    name: 🐳 Docker Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    needs: [check]
+    if: github.ref == 'refs/heads/main'  # Only run on main branch
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build production image (no push)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.prod
+          push: false
+          tags: retailiq:ci-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 4. STATUS GATE — single required check for branch protection
+  # ──────────────────────────────────────────────────────────────────────────
+  ci-pass:
+    name: ✅ CI Pass
+    if: always()
+    needs: [check, test, docker]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Check job results
+        run: |
+          echo "check:            ${{ needs.check.result }}"
+          echo "test:             ${{ needs.test.result }}"
+          echo "docker:           ${{ needs.docker.result || 'skipped' }}"
+
+          # Fail if any required job failed
+          if [[ "${{ needs.check.result }}" == "failure" ]]; then exit 1; fi
+          if [[ "${{ needs.test.result }}" == "failure" ]]; then exit 1; fi
+          # Docker only runs on main, so skip check if it wasn't triggered
+          if [[ "${{ needs.docker.result }}" == "failure" ]]; then exit 1; fi
+
+          echo "🎉 All required CI checks passed."

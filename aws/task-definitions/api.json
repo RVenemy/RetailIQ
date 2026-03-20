@@ -1,0 +1,43 @@
+{
+  "family": "retailiq-api",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "4096",
+  "executionRoleArn": "arn:aws:iam::610572473486:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::610572473486:role/retailiq-task-role",
+  "containerDefinitions": [{
+    "name": "retailiq-api",
+    "image": "610572473486.dkr.ecr.ap-south-1.amazonaws.com/retailiq-api:latest",
+    "portMappings": [{"containerPort": 5000, "protocol": "tcp"}],
+    "environment": [
+      {"name": "SERVICE_ROLE", "value": "api"},
+      {"name": "FLASK_ENV", "value": "production"}
+    ],
+    "secrets": [
+      {"name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:ap-south-1:610572473486:secret:retailiq/prod/db-url-6tuAb4"},
+      {"name": "REDIS_URL", "valueFrom": "arn:aws:secretsmanager:ap-south-1:610572473486:secret:retailiq/prod/redis-url-BFxUxq"},
+      {"name": "CELERY_BROKER_URL", "valueFrom": "arn:aws:secretsmanager:ap-south-1:610572473486:secret:retailiq/prod/celery-broker-url-Evzdmj"},
+      {"name": "SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:ap-south-1:610572473486:secret:retailiq/prod/secret-key-UGXGHU"},
+      {"name": "JWT_PRIVATE_KEY", "valueFrom": "arn:aws:secretsmanager:ap-south-1:610572473486:secret:retailiq/prod/jwt-private-t9ft01"},
+      {"name": "JWT_PUBLIC_KEY", "valueFrom": "arn:aws:secretsmanager:ap-south-1:610572473486:secret:retailiq/prod/jwt-public-WWcqby"},
+      {"name": "MAIL_USERNAME", "valueFrom": "arn:aws:secretsmanager:ap-south-1:610572473486:secret:retailiq/prod/mail-username-coPjqA"},
+      {"name": "MAIL_PASSWORD", "valueFrom": "arn:aws:secretsmanager:ap-south-1:610572473486:secret:retailiq/prod/mail-password-WqmWKU"}
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/ecs/retailiq-api",
+        "awslogs-region": "ap-south-1",
+        "awslogs-stream-prefix": "api"
+      }
+    },
+    "healthCheck": {
+      "command": ["python3", "-c", "import sys; sys.exit(0)"],
+      "interval": 30,
+      "timeout": 5,
+      "retries": 3,
+      "startPeriod": 60
+    }
+  }]
+}

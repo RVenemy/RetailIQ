@@ -1,0 +1,14 @@
+# RetailIQ ML/Analytics Dependencies
+# Install after requirements-core.txt
+
+# ── Data Processing ───────────────────────────────────────────────────────────
+numpy==1.26.4
+pandas==2.2.3
+
+# ── Forecasting ───────────────────────────────────────────────────────────────
+# prophet is large; install only if running forecasting workers
+# prophet==1.1.5
+
+# ── Lightweight stats (always installed) ─────────────────────────────────────
+statsmodels==0.14.4
+scikit-learn==1.5.2
